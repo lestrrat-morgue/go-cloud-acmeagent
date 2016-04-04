@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"sync"
+	"time"
 
 	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-jwx/jws"
@@ -65,17 +66,20 @@ type directory struct {
 	RevokeCert string `json:"revoke-cert"`
 }
 
-// Account is to hold registration information as JSON.
+// Account to holds the registration information
 type Account struct {
 	URL       string
 	TOS       string
-	TOSAgreed bool
+	AgreedTOS time.Time
 }
 
 type Combination []int
 
-type NewRegistrationRequest struct {
-	Contact []string `json:"contact"`
+type RegistrationRequest struct {
+	Agreement      string   `json:"agreement"`
+	Authorizations string   `json:"authorizations"`
+	Certificates   string   `json:"certificates"`
+	Contact        []string `json:"contact"`
 }
 
 type UpdateRegistrationRequest struct {
@@ -105,6 +109,9 @@ type Identifier struct {
 // StateStorage stores persistent data in appropriate places, such
 // as in a local directory or in the cloud.
 type StateStorage interface {
+	LoadAccount(interface{}) error
+	SaveAccount(interface{}) error
+
 	SaveAuthorization(string, interface{}) error
 	LoadAuthorization(string, interface{}) error
 

@@ -58,6 +58,42 @@ func (s Storage) pathTo(args ...string) string {
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
+// In reality this must be a pointer to `acmeagent.Account`
+func (s Storage) SaveAccount(acct interface{}) (err error) {
+	path := s.pathTo(s.ID, "info", "account.json")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.SaveAccount (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
+	dst, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	return store.SaveAccount(dst, acct)
+}
+
+// Parameter `authz` is an interface{} to avoid circular dependencies.
+// In reality this must be a pointer to `acmeagent.Account`
+func (s Storage) LoadAccount(acct interface{}) (err error) {
+	path := s.pathTo(s.ID, "info", "account.json")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadAccount (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	return store.LoadAccount(src, acct)
+}
+
+// Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a `acmeagent.Authorization`
 func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "authz.json")

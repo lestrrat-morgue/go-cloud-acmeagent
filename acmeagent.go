@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jws"
 	"github.com/lestrrat/go-pdebug"
+	"github.com/tent/http-link-go"
 )
 
 // New creates a new AcmeAgent.
@@ -127,6 +128,153 @@ func (a AcmeAgent) buildKeyAuthorization(token string) (string, error) {
 	buf.WriteByte('.')
 	buf.WriteString(base64.RawURLEncoding.EncodeToString(thumbprint))
 	return buf.String(), nil
+}
+
+func findLinkByName(res *http.Response, name string) (*link.Link, error) {
+	for _, hdr := range res.Header[http.CanonicalHeaderKey("Link")] {
+		links, err := link.Parse(hdr)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, l := range links {
+			if l.Rel == name {
+				return &l, nil
+			}
+		}
+	}
+	return nil, errors.New("no link with name '" + name + "' found")
+}
+
+func findTOS(res *http.Response) (*link.Link, error) {
+	return findLinkByName(res, "terms-of-service")
+}
+
+func (aa *AcmeAgent) sendRegistrationRequest(req RegistrationRequest) (*Account, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.sendRegistrationRequest")
+		defer g.End()
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	signed, err := aa.sign(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := http.Post(aa.directory.NewReg, joseContentType, bytes.NewReader(signed))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if err := aa.updateNonce(res); err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode > 299 {
+		return nil, newACMEError(res)
+	}
+
+	tosLink, err := findTOS(res)
+	if err != nil {
+		return nil, err
+	}
+
+	acct := Account{
+		URL: res.Header.Get("Location"),
+		TOS: tosLink.URI,
+	}
+	return &acct, nil
+}
+
+func (aa *AcmeAgent) sendUpdateRegistrationRequest(u string, req UpdateRegistrationRequest) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.sendUpdateRegistrationRequest")
+		defer g.End()
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	signed, err := aa.sign(payload)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.Post(u, joseContentType, bytes.NewReader(signed))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if err := aa.updateNonce(res); err != nil {
+		return err
+	}
+
+	if res.StatusCode > 299 {
+		return newACMEError(res)
+	}
+
+	return nil
+}
+
+func (aa *AcmeAgent) Register(email string) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.Register (%s)", email)
+		defer g.End()
+	}
+
+	if err := aa.initialize(); err != nil {
+		return err
+	}
+
+	var acct *Account
+	err := aa.store.LoadAccount(acct)
+	if err != nil {
+		req := RegistrationRequest{
+			Contact: []string{"mailto:" + email},
+		}
+
+		acct, err = aa.sendRegistrationRequest(req)
+		if err != nil {
+			return err
+		}
+
+		if err := aa.store.SaveAccount(acct); err != nil {
+			return err
+		}
+	}
+
+	if !acct.AgreedTOS.IsZero() {
+		return nil
+	}
+
+	privjwk, err := aa.store.LoadKey()
+	if err != nil {
+		return err
+	}
+
+	upreq := UpdateRegistrationRequest{
+		Contact:   []string{"mailto:" + email},
+		Agreement: acct.TOS,
+		Key:       privjwk.RsaPublicKey,
+	}
+
+	if err := aa.sendUpdateRegistrationRequest(acct.URL, upreq); err != nil {
+		return err
+	}
+
+	acct.AgreedTOS = time.Now()
+	if err := aa.store.SaveAccount(acct); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type IdentifierAuthorizationContext struct {

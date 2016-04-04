@@ -9,3 +9,32 @@ func (r AuthorizationRequest) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(m)
 }
+
+func (r RegistrationRequest) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"agreement":      r.Agreement,
+		"authorizations": r.Authorizations,
+		"certificates":   r.Certificates,
+		"contact":        r.Contact,
+		"resource":       "new-reg",
+	}
+	return json.Marshal(m)
+}
+
+func (r UpdateRegistrationRequest) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"contact":        r.Contact,
+		"resource":       "reg",
+	}
+
+	if key := r.Key; key != nil {
+		m["key"] = key
+	}
+
+	if v := r.Agreement; v != "" {
+		m["agreement"] = v
+	}
+
+	return json.Marshal(m)
+}
+

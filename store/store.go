@@ -20,6 +20,18 @@ func assertRsaPrivateKey(k jwk.Key) (*jwk.RsaPrivateKey, error) {
 	return privkey, nil
 }
 
+// Parameter `acct` is an interface{} to avoid circular dependencies.
+// In reality this must be a `acmeagent.Account`
+func SaveAccount(dst io.Writer, acct interface{}) error {
+	return json.NewEncoder(dst).Encode(acct)
+}
+
+// Parameter `acct` is an interface{} to avoid circular dependencies.
+// In reality this must be a pointer to `acmeagent.Account`
+func LoadAccount(src io.Reader, acct interface{}) error {
+	return json.NewDecoder(src).Decode(acct)
+}
+
 // Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a `acmeagent.Authorization`
 func SaveAuthorization(dst io.Writer, authz interface{}) error {
