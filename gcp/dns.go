@@ -3,6 +3,7 @@ package gcp
 import (
 	"crypto"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/lestrrat/go-pdebug"
@@ -20,23 +21,50 @@ func NewDNS(s *dns.Service, projectID, zoneName string) *CloudDNSComplete {
 	}
 }
 
+func (c *CloudDNSComplete) lookupChallengeRecord(domain string) (*dns.ResourceRecordSet, error) {
+	fqdn := "_acme-challenge." + domain + "."
+
+	rrres, err := c.Service.ResourceRecordSets.List(c.Project, c.Zone).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rr := range rrres.Rrsets {
+		if rr.Kind != "dns#resourceRecordSet" {
+			continue
+		}
+
+		if rr.Name != fqdn {
+			continue
+		}
+
+		return rr, nil
+	}
+	return nil, errors.New("resource not found")
+}
+
 func (c *CloudDNSComplete) Cleanup(domain, token string) (err error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("CloudDNSComplete.Cleanup(%s, %s)", domain, token).BindError(&err)
 		defer g.End()
 	}
 
-	fqdn := "_acme-challenge." + domain + "."
+	// Deleting the resource record set requires a pretty complete
+	// set of data. As such, it's much easier if we just look it up
+	// and use that data to set the Deletions field
+	var del *dns.ResourceRecordSet
+	if rr, err := c.lookupChallengeRecord(domain); err == nil {
+		del = rr
+	}
+
+	if del == nil {
+		// Nothing to do
+		return nil
+	}
 
 	// Send this to CloudDNS to create DNS entry
 	ch := dns.Change{
-		Deletions: []*dns.ResourceRecordSet{
-			&dns.ResourceRecordSet{
-				Kind: "dns#resourceRecordSet",
-				Name: fqdn,
-				Type: "TXT",
-			},
-		},
+		Deletions: []*dns.ResourceRecordSet{del},
 	}
 
 	if _, err := c.Service.Changes.Create(c.Project, c.Zone, &ch).Do(); err != nil {
@@ -59,22 +87,9 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 	v := base64.RawURLEncoding.EncodeToString(sum)
 
 	// Check if this record already exists
-	rrres, err := c.Service.ResourceRecordSets.List(c.Project, c.Zone).Do()
-	if err != nil {
-		return err
-	}
-
 	var del *dns.ResourceRecordSet
-	for _, rr := range rrres.Rrsets {
-		if rr.Kind != "dns#resourceRecordSet" {
-			continue
-		}
-
-		if rr.Name != fqdn {
-			continue
-		}
+	if rr, err := c.lookupChallengeRecord(domain); err == nil {
 		del = rr
-		break
 	}
 
 	// Send this to CloudDNS to create DNS entry
