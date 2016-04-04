@@ -307,6 +307,10 @@ func (aa *AcmeAgent) AuthorizeForDomain(domain string) error {
 		return err
 	}
 
+	if pdebug.Enabled {
+		pdebug.Printf("sendAuthorizationRequest response: %#v", authz)
+	}
+
 	// TODO check authz status
 	if err := aa.completeChallenges(&ctx, authz); err != nil {
 		return err

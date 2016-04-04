@@ -51,6 +51,7 @@ func TestAuthorizeGCP(t *testing.T) {
 
 	var authz acmeagent.Authorization
 	if err := store.LoadAuthorization(domain, &authz); err == nil && !authz.IsExpired() {
+		t.Logf("Authorization for %s exists, and expires on %s. Aborting", domain, authz.Expires)
 		return // no auth necessary
 	}
 
@@ -79,6 +80,7 @@ func TestAuthorizeGCP(t *testing.T) {
 
 	var acct acmeagent.Account
 	if err := store.LoadAccount(&acct); err != nil {
+		t.Logf("No account exists, registering...")
 		if !assert.NoError(t, aa.Register(email), "Register should succeed") {
 			return
 		}
