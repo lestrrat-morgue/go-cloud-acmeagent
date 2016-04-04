@@ -219,7 +219,7 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (
 	}
 
 	for i := 0; i < 3; i++ {
-		path := s.pathTo("domains", domain, names[i])
+		path := s.pathTo(s.ID, "domains", domain, names[i])
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (
 }
 
 func (s Storage) LoadCert(domain string) (cert *x509.Certificate, err error) {
-	path := s.pathTo("domains", domain, "cert.pem")
+	path := s.pathTo(s.ID, "domains", domain, "cert.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadCert (%s)", path).BindError(&err)
 		defer g.End()
