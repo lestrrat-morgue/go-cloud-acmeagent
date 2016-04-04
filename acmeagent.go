@@ -638,7 +638,13 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 	return nil
 }
 
-func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, der []byte) (string, error) {
+func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, der []byte) (certURL string, err error) {
+	if pdebug.Enabled {
+		pdebug.Marker("AcmeAgent.sendIssueCertificateRequest").BindError(&err)
+		defer g.End()
+	}
+
+
 	req := CertificateRequest{
 		CSR: base64.RawURLEncoding.EncodeToString(der),
 	}
