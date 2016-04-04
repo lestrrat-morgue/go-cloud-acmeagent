@@ -18,6 +18,26 @@ func NewDNS(s *dns.Service, projectID, zoneName string) *CloudDNSComplete {
 	}
 }
 
+func (c *CloudDNSComplete) Cleanup(domain, token string) error {
+	fqdn := "_acme-challenge." + domain + "."
+
+	// Send this to CloudDNS to create DNS entry
+	ch := dns.Change{
+		Deletions: []*dns.ResourceRecordSet{
+			&dns.ResourceRecordSet{
+				Kind:    "dns#resourceRecordSet",
+				Name:    fqdn,
+				Type:    "TXT",
+			},
+		},
+	}
+
+	if _, err := c.Service.Changes.Create(c.Project, c.Zone, &ch).Do(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Complete attempts to fulfill a dns-01 challenge using Google CloudDNS.
 func (c *CloudDNSComplete) Complete(domain, token string) error {
 	fqdn := "_acme-challenge." + domain + "."

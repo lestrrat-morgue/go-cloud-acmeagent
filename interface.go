@@ -22,6 +22,7 @@ var DefaultDirectoryURL = LetsEncryptStagingURL
 
 type ChallengeCompleter interface {
 	Complete(domain, token string) error
+	Cleanup(domain, token string) error
 }
 
 type AgentOptions struct {
