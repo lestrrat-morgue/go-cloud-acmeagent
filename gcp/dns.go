@@ -131,8 +131,12 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 			} else {
 				if pdebug.Enabled {
 					pdebug.Printf("looked up TXT records for %s, got %d entries", fqdn, len(txt))
+					pdebug.Printf("now looking for value %s...", v)
 				}
-				for _, txtv := range txt {
+				for i, txtv := range txt {
+					if pdebug.Enabled {
+						pdebug.Printf("TXT record #%d: %s", i, txtv)
+					}
 					if txtv == v {
 						goto DnsReady
 					}
