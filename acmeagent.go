@@ -494,7 +494,7 @@ func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
 	}
 
 	var wg sync.WaitGroup
-	var results []error
+	results := make([]error, len(challenges))
 	for i, challenge := range challenges {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, ch Challenge, err *error) {
