@@ -9,7 +9,7 @@ import (
 
 func (e *ACMEError) Error() string {
 	return fmt.Sprintf(
-		"aaa: acme error(%d): type: %s detail: %s",
+		"acme error(%d): type: %s detail: %s",
 		e.StatusCode,
 		e.Type,
 		e.Detail,
