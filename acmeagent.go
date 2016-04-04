@@ -12,6 +12,7 @@ import (
 
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jws"
+	"github.com/lestrrat/go-pdebug"
 )
 
 // New creates a new AcmeAgent.
@@ -133,6 +134,11 @@ type IdentifierAuthorizationContext struct {
 }
 
 func (a *AcmeAgent) AuthorizeForDomain(domain string) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.AuthorizeForDomain (%s)", domain)
+		defer g.End()
+	}
+
 	if err := a.initialize(); err != nil {
 		return err
 	}
@@ -155,6 +161,11 @@ func (a *AcmeAgent) AuthorizeForDomain(domain string) error {
 }
 
 func (a *AcmeAgent) sendAuthorizationRequest(ctx *IdentifierAuthorizationContext) (*Authorization, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.sendAuthorizationRequest")
+		defer g.End()
+	}
+
 	req := AuthorizationRequest{
 		Identifier: Identifier{
 			Type:  "dns",
@@ -194,6 +205,11 @@ func (a *AcmeAgent) sendAuthorizationRequest(ctx *IdentifierAuthorizationContext
 }
 
 func getChallengeStatus(u string, c *Challenge) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.getChallengeStatus (%s)", u)
+		defer g.End()
+	}
+
 	res, err := http.Get(u)
 	if err != nil {
 		return err
@@ -208,6 +224,11 @@ func getChallengeStatus(u string, c *Challenge) error {
 }
 
 func (aa *AcmeAgent) respondChallengeCompleted(challenge Challenge) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.respondChallengeCompleted")
+		defer g.End()
+	}
+
 	keyauthz, err := aa.buildKeyAuthorization(challenge.Token)
 	if err != nil {
 		return err
@@ -248,6 +269,11 @@ func (aa *AcmeAgent) respondChallengeCompleted(challenge Challenge) error {
 }
 
 func (aa *AcmeAgent) completeChallenges(ctx *IdentifierAuthorizationContext, authz *Authorization) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.completeChallenges")
+		defer g.End()
+	}
+
 	// If combinations is empty, we must fulfill all of the challenges
 	// Otherwise, just do the ones specified
 	var challenges [][]Challenge
@@ -314,6 +340,11 @@ OUTER:
 }
 
 func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.WaitChallengeValidation")
+		defer g.End()
+	}
+
 	var wg sync.WaitGroup
 	var results []error
 	for i, challenge := range challenges {

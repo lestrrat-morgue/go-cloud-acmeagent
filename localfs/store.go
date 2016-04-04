@@ -8,6 +8,7 @@ import (
 
 	"github.com/lestrrat/go-cloud-acmeagent/store"
 	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/lestrrat/go-pdebug"
 )
 
 /*
@@ -58,8 +59,13 @@ func (s Storage) pathTo(args ...string) string {
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a `acmeagent.Authorization`
-func (s Storage) SaveAuthorization(domain string, authz interface{}) error {
+func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "authz.json")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.SaveAuthorization (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -75,8 +81,13 @@ func (s Storage) SaveAuthorization(domain string, authz interface{}) error {
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a pointer to `acmeagent.Authorization`
-func (s Storage) LoadAuthorization(domain string, authz interface{}) error {
+func (s Storage) LoadAuthorization(domain string, authz interface{}) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "authz.json")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadAuthorization (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	src, err := os.Open(path)
 	if err != nil {
 		return err
@@ -86,8 +97,13 @@ func (s Storage) LoadAuthorization(domain string, authz interface{}) error {
 	return store.LoadAuthorization(src, authz)
 }
 
-func (s Storage) SaveKey(k *jwk.RsaPrivateKey) error {
+func (s Storage) SaveKey(k *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "info", "privkey.jwk")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.SaveKey (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -101,8 +117,13 @@ func (s Storage) SaveKey(k *jwk.RsaPrivateKey) error {
 	return store.SaveKey(dst, k)
 }
 
-func (s Storage) LoadKey() (*jwk.RsaPrivateKey, error) {
+func (s Storage) LoadKey() (key *jwk.RsaPrivateKey, err error) {
 	path := s.pathTo(s.ID, "info", "privkey.jwk")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadKey (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	src, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -112,8 +133,13 @@ func (s Storage) LoadKey() (*jwk.RsaPrivateKey, error) {
 	return store.LoadKey(src)
 }
 
-func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) error {
+func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "privkey.pem")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.SaveCertKey (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -127,8 +153,13 @@ func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) error {
 	return store.SaveCertKey(dst, k)
 }
 
-func (s Storage) LoadCertKey(domain string) (*jwk.RsaPrivateKey, error) {
+func (s Storage) LoadCertKey(domain string) (key *jwk.RsaPrivateKey, err error) {
 	path := s.pathTo(s.ID, "domains", domain, "privkey.pem")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadCertKey (%s)", path).BindError(&err)
+		defer g.End()
+	}
+
 	src, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -138,7 +169,12 @@ func (s Storage) LoadCertKey(domain string) (*jwk.RsaPrivateKey, error) {
 	return store.LoadCertKey(src)
 }
 
-func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) error {
+func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.SaveCert").BindError(&err)
+		defer g.End()
+	}
+
 	names := []string{"fullchain.pem", "cert.pem", "chain.pem"}
 	certs := [][]*x509.Certificate{
 		[]*x509.Certificate{myCert, issuerCert},
@@ -165,8 +201,12 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) e
 	return nil
 }
 
-func (s Storage) LoadCert(domain string) (*x509.Certificate, error) {
+func (s Storage) LoadCert(domain string) (cert *x509.Certificate, err error) {
 	path := s.pathTo("domains", domain, "cert.pem")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadCert (%s)", path).BindError(&err)
+		defer g.End()
+	}
 	src, err := os.Open(path)
 	if err != nil {
 		return nil, err
