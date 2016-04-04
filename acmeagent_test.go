@@ -77,6 +77,13 @@ func TestAuthorizeGCP(t *testing.T) {
 		StateStorage: store,
 	})
 
+	var acct acmeagent.Account
+	if err := store.LoadAccount(&acct); err != nil {
+		if !assert.NoError(t, aa.Register(email), "Register should succeed") {
+			return
+		}
+	}
+
 	// With us so far? now fire the request, and let the authorization happen
 	if !assert.NoError(t, aa.AuthorizeForDomain(domain), "authorize should succeed") {
 		return
