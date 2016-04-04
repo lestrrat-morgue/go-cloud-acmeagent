@@ -555,7 +555,6 @@ func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
 type IssueCertificateContext struct {
 	CommonName string
 	Domain     string
-	FQDN       string
 	Renew      bool
 }
 
@@ -572,11 +571,10 @@ func (aa *AcmeAgent) IssueCertificate(cn, domain string, renew bool) error {
 	ctx := IssueCertificateContext{
 		CommonName: cn,
 		Domain:     domain,
-		FQDN:       cn + "." + domain,
 		Renew:      renew,
 	}
 
-	if cert, err := aa.store.LoadCert(ctx.CommonName); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
+	if cert, err := aa.store.LoadCert(ctx.Domain); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
 		if pdebug.Enabled {
 			pdebug.Printf("Certificate is valid until %s, aborting", cert.NotAfter.Format(time.RFC3339))
 		}
@@ -587,7 +585,7 @@ func (aa *AcmeAgent) IssueCertificate(cn, domain string, renew bool) error {
 		pdebug.Printf("Issuing new certificiate")
 	}
 
-	privjwk, err := aa.store.LoadCertKey(ctx.CommonName)
+	privjwk, err := aa.store.LoadCertKey(ctx.Domain)
 	if err != nil {
 		// No certificate key available, need to create a new one
 		certkey, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -611,7 +609,7 @@ func (aa *AcmeAgent) IssueCertificate(cn, domain string, renew bool) error {
 		Subject: pkix.Name{
 			CommonName: ctx.CommonName,
 		},
-		DNSNames: []string{ctx.FQDN},
+		DNSNames: []string{ctx.Domain},
 	}
 
 	privkey, err := privjwk.PrivateKey()
