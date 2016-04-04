@@ -640,10 +640,9 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 
 func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, der []byte) (certURL string, err error) {
 	if pdebug.Enabled {
-		pdebug.Marker("AcmeAgent.sendIssueCertificateRequest").BindError(&err)
+		g := pdebug.Marker("AcmeAgent.sendIssueCertificateRequest").BindError(&err)
 		defer g.End()
 	}
-
 
 	req := CertificateRequest{
 		CSR: base64.RawURLEncoding.EncodeToString(der),
