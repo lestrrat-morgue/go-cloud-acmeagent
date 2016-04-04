@@ -37,7 +37,7 @@ func TestAuthorizeGCP(t *testing.T) {
 	}
 
 	cn := os.Getenv("ACME_AGENT_TEST_COMMON_NAME")
-	if cn != "" {
+	if cn == "" {
 		t.Logf("ACME_AGENT_TEST_COMMON_NAME environment variable is required for this test")
 		return
 	}
