@@ -66,9 +66,9 @@ func (a *AcmeAgent) initialize() (err error) {
 	}
 
 	a.signer = jws.NewSigner(rsaSigner)
-	pubkey := a.privkey.PublicKey
+	pubjwk := a.privjwk.RsaPublicKey
 	for _, s := range a.signer.Signers {
-		if err := s.PublicHeaders().Set("jwk", pubkey); err != nil {
+		if err := s.PublicHeaders().Set("jwk", pubjwk); err != nil {
 			return err
 		}
 	}
