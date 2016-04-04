@@ -50,7 +50,7 @@ func TestAuthorizeGCP(t *testing.T) {
 	}
 
 	var authz acmeagent.Authorization
-	if err := store.LoadAuthorization(domain, &authz); err != nil || !authz.IsExpired() {
+	if err := store.LoadAuthorization(domain, &authz); err == nil && !authz.IsExpired() {
 		return // no auth necessary
 	}
 
