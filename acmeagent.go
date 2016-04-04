@@ -547,6 +547,12 @@ func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
 						return
 					}
 
+					if pdebug.Enabled {
+						buf, _ := json.MarshalIndent(st, "", "  ")
+						pdebug.Printf("Challenge status (%s):", ch.URI)
+						pdebug.Printf("%s", buf)
+					}
+
 					switch st.Status {
 					case "pending":
 						continue
