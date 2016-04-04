@@ -97,7 +97,7 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
-	if !assert.NoError(t, aa.IssueCertificate(cn, domain, false), "IssueCertificate should succeed") {
+	if !assert.NoError(t, aa.IssueCertificate(cn, fqdn, false), "IssueCertificate should succeed") {
 		return
 	}
 }
