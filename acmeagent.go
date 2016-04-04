@@ -3,14 +3,21 @@ package acmeagent
 import (
 	"bytes"
 	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-jwx/jws"
 	"github.com/lestrrat/go-pdebug"
 	"github.com/tent/http-link-go"
@@ -41,44 +48,44 @@ func New(opts AgentOptions) (*AcmeAgent, error) {
 // exactly once per lifecycle of an agent. its purpose is to
 // send the initial request to Let's Encrypt to initiate the
 // whole process.
-func (a *AcmeAgent) initialize() (err error) {
-	a.initLock.Lock()
-	defer a.initLock.Unlock()
+func (aa *AcmeAgent) initialize() (err error) {
+	aa.initLock.Lock()
+	defer aa.initLock.Unlock()
 
-	if a.initialized {
+	if aa.initialized {
 		return nil
 	}
 
-	a.privjwk, err = a.store.LoadKey()
+	aa.privjwk, err = aa.store.LoadKey()
 	if err != nil {
 		return err
 	}
-	a.privkey, err = a.privjwk.PrivateKey()
+	aa.privkey, err = aa.privjwk.PrivateKey()
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
-
-	rsaSigner, err := jws.NewRsaSign(jwa.RS256, a.privkey)
 	if err != nil {
 		return err
 	}
 
-	a.signer = jws.NewSigner(rsaSigner)
-	pubjwk := a.privjwk.RsaPublicKey
-	for _, s := range a.signer.Signers {
+	rsaSigner, err := jws.NewRsaSign(jwa.RS256, aa.privkey)
+	if err != nil {
+		return err
+	}
+
+	aa.signer = jws.NewSigner(rsaSigner)
+	pubjwk := aa.privjwk.RsaPublicKey
+	for _, s := range aa.signer.Signers {
 		if err := s.PublicHeaders().Set("jwk", pubjwk); err != nil {
 			return err
 		}
 	}
 
-	res, err := http.Get(a.directoryURL)
+	res, err := http.Get(aa.directoryURL)
 	if err != nil {
 		return err
 	}
-	if err := a.updateNonce(res); err != nil {
+	if err := aa.updateNonce(res); err != nil {
 		return err
 	}
 
@@ -86,30 +93,30 @@ func (a *AcmeAgent) initialize() (err error) {
 		return newACMEError(res)
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&a.directory); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&aa.directory); err != nil {
 		return err
 	}
 	defer res.Body.Close()
 
-	a.initialized = true
+	aa.initialized = true
 	return nil
 }
 
-func (a *AcmeAgent) sign(payload []byte) ([]byte, error) {
-	msg, err := a.signer.Sign(payload)
+func (aa *AcmeAgent) sign(payload []byte) ([]byte, error) {
+	msg, err := aa.signer.Sign(payload)
 	if err != nil {
 		return nil, err
 	}
 	return jws.JSONSerialize{}.Serialize(msg)
 }
 
-func (a *AcmeAgent) updateNonce(res *http.Response) error {
+func (aa *AcmeAgent) updateNonce(res *http.Response) error {
 	nonce := res.Header.Get("Replay-Nonce")
 	if nonce == "" {
 		return errors.New("header 'Replay-Nonce' not found")
 	}
 
-	for _, signer := range a.signer.Signers {
+	for _, signer := range aa.signer.Signers {
 		if err := signer.ProtectedHeaders().Set("nonce", nonce); err != nil {
 			return err
 		}
@@ -117,8 +124,8 @@ func (a *AcmeAgent) updateNonce(res *http.Response) error {
 	return nil
 }
 
-func (a AcmeAgent) buildKeyAuthorization(token string) (string, error) {
-	thumbprint, err := a.privjwk.Thumbprint(crypto.SHA256)
+func (aa AcmeAgent) buildKeyAuthorization(token string) (string, error) {
+	thumbprint, err := aa.privjwk.Thumbprint(crypto.SHA256)
 	if err != nil {
 		return "", err
 	}
@@ -281,13 +288,13 @@ type IdentifierAuthorizationContext struct {
 	Domain string
 }
 
-func (a *AcmeAgent) AuthorizeForDomain(domain string) error {
+func (aa *AcmeAgent) AuthorizeForDomain(domain string) error {
 	if pdebug.Enabled {
 		g := pdebug.Marker("AcmeAgent.AuthorizeForDomain (%s)", domain)
 		defer g.End()
 	}
 
-	if err := a.initialize(); err != nil {
+	if err := aa.initialize(); err != nil {
 		return err
 	}
 
@@ -295,20 +302,20 @@ func (a *AcmeAgent) AuthorizeForDomain(domain string) error {
 		Domain: domain,
 	}
 
-	authz, err := a.sendAuthorizationRequest(&ctx)
+	authz, err := aa.sendAuthorizationRequest(&ctx)
 	if err != nil {
 		return err
 	}
 
 	// TODO check authz status
-	if err := a.completeChallenges(&ctx, authz); err != nil {
+	if err := aa.completeChallenges(&ctx, authz); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (a *AcmeAgent) sendAuthorizationRequest(ctx *IdentifierAuthorizationContext) (*Authorization, error) {
+func (aa *AcmeAgent) sendAuthorizationRequest(ctx *IdentifierAuthorizationContext) (*Authorization, error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("AcmeAgent.sendAuthorizationRequest")
 		defer g.End()
@@ -325,17 +332,17 @@ func (a *AcmeAgent) sendAuthorizationRequest(ctx *IdentifierAuthorizationContext
 		return nil, err
 	}
 
-	signed, err := a.sign(payload)
+	signed, err := aa.sign(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := http.Post(a.directory.NewAuthz, joseContentType, bytes.NewReader(signed))
+	res, err := http.Post(aa.directory.NewAuthz, joseContentType, bytes.NewReader(signed))
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
-	if err := a.updateNonce(res); err != nil {
+	if err := aa.updateNonce(res); err != nil {
 		return nil, err
 	}
 
@@ -543,4 +550,203 @@ func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
 	}
 
 	return nil
+}
+
+type IssueCertificateContext struct {
+	CommonName string
+	Domain     string
+	FQDN       string
+	Renew      bool
+}
+
+func (aa *AcmeAgent) IssueCertificate(cn, domain string, renew bool) error {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.IssueCertificate (%s)", cn)
+		defer g.End()
+	}
+
+	if err := aa.initialize(); err != nil {
+		return err
+	}
+
+	ctx := IssueCertificateContext{
+		CommonName: cn,
+		Domain:     domain,
+		FQDN:       cn + "." + domain,
+		Renew:      renew,
+	}
+
+	if cert, err := aa.store.LoadCert(ctx.CommonName); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
+		if pdebug.Enabled {
+			pdebug.Printf("Certificate is valid until %s, aborting", cert.NotAfter.Format(time.RFC3339))
+		}
+		return nil
+	}
+
+	if pdebug.Enabled {
+		pdebug.Printf("Issuing new certificiate")
+	}
+
+	privjwk, err := aa.store.LoadCertKey(ctx.CommonName)
+	if err != nil {
+		// No certificate key available, need to create a new one
+		certkey, err := rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			return err
+		}
+
+		privjwk, err = jwk.NewRsaPrivateKey(certkey)
+		if err != nil {
+			return err
+		}
+
+		if err := aa.store.SaveCertKey(ctx.Domain, privjwk); err != nil {
+			return err
+		}
+	}
+
+	csr := x509.CertificateRequest{
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		PublicKeyAlgorithm: x509.RSA,
+		Subject: pkix.Name{
+			CommonName: ctx.CommonName,
+		},
+		DNSNames: []string{ctx.FQDN},
+	}
+
+	privkey, err := privjwk.PrivateKey()
+	if err != nil {
+		return err
+	}
+
+	der, err := x509.CreateCertificateRequest(rand.Reader, &csr, privkey)
+	if err != nil {
+		return err
+	}
+
+	certURL, err := aa.sendIssueCertificateRequest(&ctx, der)
+	if err != nil {
+		return err
+	}
+
+	issuerCert, myCert, err := aa.WaitForCertificates(&ctx, certURL)
+	if err != nil {
+		return err
+	}
+
+	if err := aa.store.SaveCert(ctx.Domain, issuerCert, myCert); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, der []byte) (string, error) {
+	req := CertificateRequest{
+		CSR: base64.RawURLEncoding.EncodeToString(der),
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+
+	signed, err := aa.sign(payload)
+	if err != nil {
+		return "", err
+	}
+
+	res, err := http.Post(aa.directory.NewCert, joseContentType, bytes.NewReader(signed))
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if err := aa.updateNonce(res); err != nil {
+		return "", err
+	}
+
+	if res.StatusCode > 299 {
+		return "", newACMEError(res)
+	}
+
+	return res.Header.Get("Location"), nil
+}
+
+func (aa *AcmeAgent) WaitForCertificates(ctx *IssueCertificateContext, u string) (*x509.Certificate, *x509.Certificate, error) {
+	timeout := time.After(3 * time.Minute)
+	ticker := time.Tick(5 * time.Second)
+
+	var certres *http.Response
+	for {
+		select {
+		case <-timeout:
+			return nil, nil, errors.New("timeout reached")
+		case <-ticker:
+			res, err := http.Get(u)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if res.StatusCode > 299 {
+				return nil, nil, newACMEError(res)
+			}
+
+			switch res.StatusCode {
+			case http.StatusAccepted:
+				// Still creating the certificate...
+				continue
+			case http.StatusOK:
+				// Ooooh, yeah!
+				certres = res
+				goto GetCert
+			default:
+				// We got a problem
+				return nil, nil, errors.New("invalid response: " + res.Status)
+			}
+		}
+	}
+
+GetCert:
+	buf, err := ioutil.ReadAll(certres.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// This buffer contains my cert
+	myCert, err := x509.ParseCertificate(buf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Now look for the issuer cert
+	certlink, err := findLinkByName(certres, "up")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	uparsed, err := url.Parse(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	uparsed, err = uparsed.Parse(certlink.URI)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	issuerres, err := http.Get(uparsed.String())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	buf, err = ioutil.ReadAll(issuerres.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// This buffer contains issuer cert
+	issuerCert, err := x509.ParseCertificate(buf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return issuerCert, myCert, nil
 }

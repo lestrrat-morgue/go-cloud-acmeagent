@@ -154,4 +154,9 @@ type ChallengeCompletionRequest struct {
 	KeyAuthorization string `json:"keyAuthorization,omitempty"`
 }
 
+type CertificateRequest struct {
+	Resource string `json:"resource"`
+	CSR      string `json:"csr"`
+}
+
 const defaultRRSetTTL = 10
