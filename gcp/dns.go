@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"time"
 
 	"github.com/lestrrat/go-pdebug"
 
@@ -113,5 +115,25 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 		return err
 	}
 
+	// Wait for the record to be available
+	timeout := time.After(30 * time.Second)
+	ticker := time.Tick(time.Second)
+	for {
+		select {
+		case <-timeout:
+			return errors.New("timed out waiting for DNS record to be available")
+		case <-ticker:
+			txt, err := net.LookupTXT(fqdn)
+			if err == nil {
+				for _, txtv := range txt {
+					if txtv == v {
+						goto DnsReady
+					}
+				}
+			}
+		}
+	}
+
+DnsReady:
 	return nil
 }
