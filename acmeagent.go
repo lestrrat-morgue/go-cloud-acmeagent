@@ -652,6 +652,10 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 		return err
 	}
 
+	if pdebug.Enabled {
+		pdebug.Printf("Fetching certs from %s", certURL)
+	}
+
 	issuerCert, myCert, err := aa.WaitForCertificates(&ctx, certURL)
 	if err != nil {
 		return err
@@ -703,7 +707,11 @@ func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, d
 	return res.Header.Get("Location"), nil
 }
 
-func (aa *AcmeAgent) WaitForCertificates(ctx *IssueCertificateContext, u string) (*x509.Certificate, *x509.Certificate, error) {
+func (aa *AcmeAgent) WaitForCertificates(ctx *IssueCertificateContext, u string) (issuerCert *x509.Certificate, myCert *x509.Certificate, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.WaitForCertificates").BindError(&err)
+		defer g.End()
+	}
 	timeout := time.After(3 * time.Minute)
 	ticker := time.Tick(5 * time.Second)
 
@@ -728,6 +736,9 @@ func (aa *AcmeAgent) WaitForCertificates(ctx *IssueCertificateContext, u string)
 			switch res.StatusCode {
 			case http.StatusAccepted:
 				// Still creating the certificate...
+				if pdebug.Enabled {
+					pdebug.Printf("Certificate not ready yet...")
+				}
 				continue
 			case http.StatusOK:
 				// Ooooh, yeah!
@@ -747,7 +758,7 @@ GetCert:
 	}
 
 	// This buffer contains my cert
-	myCert, err := x509.ParseCertificate(buf)
+	myCert, err = x509.ParseCertificate(buf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -767,6 +778,10 @@ GetCert:
 		return nil, nil, err
 	}
 
+	if pdebug.Enabled {
+		pdebug.Printf("Next, fetching issuer certificate from %s", uparsed.String())
+	}
+
 	httpreq, err := http.NewRequest("GET", uparsed.String(), nil)
 	httpreq.Header.Set("Accept", "application/pkix-cert")
 	issuerres, err := http.DefaultClient.Do(httpreq)
@@ -780,9 +795,13 @@ GetCert:
 	}
 
 	// This buffer contains issuer cert
-	issuerCert, err := x509.ParseCertificate(buf)
+	issuerCert, err = x509.ParseCertificate(buf)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if pdebug.Enabled {
+		pdebug.Printf("All done, returning certs")
 	}
 
 	return issuerCert, myCert, nil
