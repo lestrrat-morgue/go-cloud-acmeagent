@@ -116,8 +116,8 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 	}
 
 	// Wait for the record to be available
-	timeout := time.After(30 * time.Second)
-	ticker := time.Tick(time.Second)
+	timeout := time.After(10 * time.Minute)
+	ticker := time.Tick(10 * time.Second)
 	for {
 		select {
 		case <-timeout:
