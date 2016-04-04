@@ -452,7 +452,7 @@ func (aa *AcmeAgent) completeChallenges(ctx *IdentifierAuthorizationContext, aut
 OUTER:
 	for i, challengeSet := range challenges {
 		if pdebug.Enabled {
-			pdebug.Printf("Attempting challenge set #%d")
+			pdebug.Printf("Attempting challenge set #%d", i)
 		}
 		for _, challenge := range challengeSet {
 			var cc ChallengeCompleter
@@ -476,7 +476,7 @@ OUTER:
 			}
 
 			if pdebug.Enabled {
-				pdebug.Printf("Attempting to complete challenge '%s'", challege.Type)
+				pdebug.Printf("Attempting to complete challenge '%s'", challenge.Type)
 			}
 
 			keyauthz, err := aa.buildKeyAuthorization(challenge.Token)
@@ -501,7 +501,7 @@ OUTER:
 		// Congratulations! Once you go there, that means
 		// we completed this challenge set!
 		if pdebug.Enabled {
-			pdebug.Printf("Successfully completed challenge set #%d")
+			pdebug.Printf("Successfully completed challenge set #%d", i)
 		}
 
 		// Now let the server know that we have completed
