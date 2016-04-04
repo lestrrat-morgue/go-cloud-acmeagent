@@ -91,7 +91,7 @@ func TestAuthorizeGCP(t *testing.T) {
 	}
 
 	// With us so far? now fire the request, and let the authorization happen
-	if !assert.NoError(t, aa.AuthorizeForDomain(domain), "authorize should succeed") {
+	if !assert.NoError(t, aa.AuthorizeForDomain(cn + "." + domain), "authorize should succeed") {
 		return
 	}
 
