@@ -36,6 +36,12 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
+	cn := os.Getenv("ACME_AGENT_TEST_COMMON_NAME")
+	if cn != "" {
+		t.Logf("ACME_AGENT_TEST_COMMON_NAME environment variable is required for this test")
+		return
+	}
+
 	wd, err := os.Getwd()
 	if !assert.NoError(t, err, "Getting working directory should succeed") {
 		return
@@ -86,6 +92,10 @@ func TestAuthorizeGCP(t *testing.T) {
 
 	// With us so far? now fire the request, and let the authorization happen
 	if !assert.NoError(t, aa.AuthorizeForDomain(domain), "authorize should succeed") {
+		return
+	}
+
+	if !assert.NoError(t, aa.IssueCertificate(cn, domain, false), "IssueCertificate should succeed") {
 		return
 	}
 }
