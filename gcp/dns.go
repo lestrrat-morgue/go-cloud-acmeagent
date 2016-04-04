@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/lestrrat/go-pdebug"
+
 	"google.golang.org/api/dns/v1"
 )
 
@@ -18,16 +20,21 @@ func NewDNS(s *dns.Service, projectID, zoneName string) *CloudDNSComplete {
 	}
 }
 
-func (c *CloudDNSComplete) Cleanup(domain, token string) error {
+func (c *CloudDNSComplete) Cleanup(domain, token string) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("CloudDNSComplete.Cleanup(%s, %s)", domain, token).BindError(&err)
+		defer g.End()
+	}
+
 	fqdn := "_acme-challenge." + domain + "."
 
 	// Send this to CloudDNS to create DNS entry
 	ch := dns.Change{
 		Deletions: []*dns.ResourceRecordSet{
 			&dns.ResourceRecordSet{
-				Kind:    "dns#resourceRecordSet",
-				Name:    fqdn,
-				Type:    "TXT",
+				Kind: "dns#resourceRecordSet",
+				Name: fqdn,
+				Type: "TXT",
 			},
 		},
 	}
@@ -39,7 +46,12 @@ func (c *CloudDNSComplete) Cleanup(domain, token string) error {
 }
 
 // Complete attempts to fulfill a dns-01 challenge using Google CloudDNS.
-func (c *CloudDNSComplete) Complete(domain, token string) error {
+func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("CloudDNSComplete.Complete(%s, %s)", domain, token).BindError(&err)
+		defer g.End()
+	}
+
 	fqdn := "_acme-challenge." + domain + "."
 	hasher := crypto.SHA256.New()
 	fmt.Fprint(hasher, token)
@@ -72,7 +84,7 @@ func (c *CloudDNSComplete) Complete(domain, token string) error {
 				Kind:    "dns#resourceRecordSet",
 				Name:    fqdn,
 				Rrdatas: []string{v},
-				Ttl:     300,
+				Ttl:     10,
 				Type:    "TXT",
 			},
 		},
