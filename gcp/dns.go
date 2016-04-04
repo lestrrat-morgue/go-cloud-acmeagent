@@ -124,7 +124,11 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 			return errors.New("timed out waiting for DNS record to be available")
 		case <-ticker:
 			txt, err := net.LookupTXT(fqdn)
-			if err == nil {
+			if err != nil {
+				if pdebug.Enabled {
+					pdebug.Printf("Failed to lookup TXT record for %s: %s", fqdn, err)
+				}
+			} else {
 				for _, txtv := range txt {
 					if txtv == v {
 						goto DnsReady
