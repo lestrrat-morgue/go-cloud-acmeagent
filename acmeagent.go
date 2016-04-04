@@ -658,7 +658,11 @@ func (aa *AcmeAgent) sendIssueCertificateRequest(ctx *IssueCertificateContext, d
 		return "", err
 	}
 
-	res, err := http.Post(aa.directory.NewCert, joseContentType, bytes.NewReader(signed))
+	httpreq, err := http.NewRequest("POST", aa.directory.NewCert, bytes.NewReader(signed))
+	httpreq.Header.Set("Content-Type", joseContentType)
+	httpreq.Header.Set("Accept", "application/pkix-cert")
+
+	res, err := http.DefaultClient.Do(httpreq)
 	if err != nil {
 		return "", err
 	}
@@ -684,7 +688,10 @@ func (aa *AcmeAgent) WaitForCertificates(ctx *IssueCertificateContext, u string)
 		case <-timeout:
 			return nil, nil, errors.New("timeout reached")
 		case <-ticker:
-			res, err := http.Get(u)
+			httpreq, err := http.NewRequest("GET", u, nil)
+			httpreq.Header.Set("Accept", "application/pkix-cert")
+
+			res, err := http.DefaultClient.Do(httpreq)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -735,7 +742,9 @@ GetCert:
 		return nil, nil, err
 	}
 
-	issuerres, err := http.Get(uparsed.String())
+	httpreq, err := http.NewRequest("GET", uparsed.String(), nil)
+	httpreq.Header.Set("Accept", "application/pkix-cert")
+	issuerres, err := http.DefaultClient.Do(httpreq)
 	if err != nil {
 		return nil, nil, err
 	}
