@@ -55,8 +55,10 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
+	fqdn := cn + "." + domain
+
 	var authz acmeagent.Authorization
-	if err := store.LoadAuthorization(domain, &authz); err == nil && !authz.IsExpired() {
+	if err := store.LoadAuthorization(fqdn, &authz); err == nil && !authz.IsExpired() {
 		return // no auth necessary
 	}
 
@@ -91,7 +93,7 @@ func TestAuthorizeGCP(t *testing.T) {
 	}
 
 	// With us so far? now fire the request, and let the authorization happen
-	if !assert.NoError(t, aa.AuthorizeForDomain(cn + "." + domain), "authorize should succeed") {
+	if !assert.NoError(t, aa.AuthorizeForDomain(fqdn), "authorize should succeed") {
 		return
 	}
 
