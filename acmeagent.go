@@ -493,6 +493,7 @@ OUTER:
 				}
 				continue OUTER
 			}
+			defer cc.Cleanup(ctx.Domain, keyauthz)
 
 			if pdebug.Enabled {
 				pdebug.Printf("Successfully completed challenge '%s'", challenge.Type)
@@ -542,7 +543,7 @@ func (aa *AcmeAgent) WaitChallengeValidation(challenges []Challenge) error {
 					*err = errors.New("timeout reached")
 				case <-ticker:
 					var st Challenge
-					if *err = getChallengeStatus(ch.URI, &st); err != nil {
+					if *err = getChallengeStatus(ch.URI, &st); *err != nil {
 						return
 					}
 
