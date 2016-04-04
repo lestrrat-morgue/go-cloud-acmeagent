@@ -129,6 +129,9 @@ func (c *CloudDNSComplete) Complete(domain, token string) (err error) {
 					pdebug.Printf("Failed to lookup TXT record for %s: %s", fqdn, err)
 				}
 			} else {
+				if pdebug.Enabled {
+					pdebug.Printf("looked up TXT records for %s, got %d entries", fqdn, len(txt))
+				}
 				for _, txtv := range txt {
 					if txtv == v {
 						goto DnsReady
