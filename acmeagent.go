@@ -450,6 +450,9 @@ OUTER:
 			case TLSSNIChallenge:
 				cc = aa.tlssnicc
 			default:
+				if pdebug.Enabled {
+					pdebug.Printf("Challenge '%s' cannot be handled", challenge.Type)
+				}
 				// Taken care after this switch
 			}
 
@@ -460,10 +463,16 @@ OUTER:
 
 			keyauthz, err := aa.buildKeyAuthorization(challenge.Token)
 			if err != nil {
+				if pdebug.Enabled {
+					pdebug.Printf("Failed to build key authorization: %s", err)
+				}
 				continue OUTER
 			}
 
 			if err := cc.Complete(ctx.Domain, keyauthz); err != nil {
+				if pdebug.Enabled {
+					pdebug.Printf("Failed to complete challenge '%s': %s", challenge.Type, err)
+				}
 				continue OUTER
 			}
 		}
