@@ -21,8 +21,7 @@ func NewStorage(s *storage.Service, projectID, email, bucketName string) *Storag
 }
 
 func (s Storage) pathTo(args ...string) string {
-	l := append([]string{s.BucketName}, args...)
-	return path.Join(l...)
+	return path.Join(args...)
 }
 
 func (s Storage) assertBucket() error {
