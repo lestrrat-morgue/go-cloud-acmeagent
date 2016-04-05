@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -22,6 +24,17 @@ import (
 	"github.com/lestrrat/go-pdebug"
 	"github.com/tent/http-link-go"
 )
+
+var sslCertKeySize = 2048
+
+func init() {
+	if v := os.Getenv("ACME_AGENT_SSL_CERT_KEY_SIZE"); v != "" {
+		iv, err := strconv.Atoi(v)
+		if err == nil {
+			sslCertKeySize = iv
+		}
+	}
+}
 
 // New creates a new AcmeAgent.
 func New(opts AgentOptions) (*AcmeAgent, error) {
@@ -614,7 +627,7 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 	privjwk, err := aa.store.LoadCertKey(ctx.CommonName)
 	if err != nil {
 		// No certificate key available, need to create a new one
-		certkey, err := rsa.GenerateKey(rand.Reader, 4096)
+		certkey, err := rsa.GenerateKey(rand.Reader, sslCertKeySize)
 		if err != nil {
 			return err
 		}
