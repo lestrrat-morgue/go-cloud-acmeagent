@@ -29,6 +29,7 @@ func New(opts AgentOptions) (*AcmeAgent, error) {
 		dnscc:        opts.DNSCompleter,
 		httpcc:       opts.HTTPCompleter,
 		tlssnicc:     opts.TLSSNICompleter,
+		uploader:     opts.Uploader,
 		directoryURL: opts.DirectoryURL,
 		store:        opts.StateStorage,
 	}
@@ -805,4 +806,21 @@ GetCert:
 	}
 
 	return issuerCert, myCert, nil
+}
+
+func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("AcmeAgent.UploadCertificate (%s)", domain).BindError(&err)
+		defer g.End()
+	}
+
+	if aa.uploader == nil {
+		return errors.New("uploader not configured")
+	}
+
+	cert, err := aa.store.LoadCertFullChain(domain)
+	if err != nil {
+		return err
+	}
+	return aa.uploader.Upload(domain, cert)
 }

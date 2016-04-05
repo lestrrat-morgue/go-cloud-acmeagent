@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/lestrrat/go-cloud-acmeagent"
 	"github.com/lestrrat/go-cloud-acmeagent/gcp"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
 )
 
@@ -49,13 +51,6 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
-	var authz acmeagent.Authorization
-	if err := store.LoadAuthorization(domain, &authz); err == nil && !authz.IsExpired() {
-		t.Logf("Authorization for %s exists, and expires on %s. Aborting", domain, authz.Expires)
-		return // no auth necessary
-	}
-
-	// Get your challange fulfilling strategy ready. Here we're
 	// getting an object that can create appropriate DNS entries
 	// using Google CloudDNS to respond to dns-01 challenge
 	ctx := context.Background()
@@ -72,9 +67,15 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
+	computesvc, err := compute.New(httpcl)
+	if !assert.NoError(t, err, "creating new Compute service should succeed") {
+		return
+	}
+
 	// Tell the agent which challenges we can accept
 	aa, err := acmeagent.New(acmeagent.AgentOptions{
 		DNSCompleter: gcp.NewDNS(dnssvc, gcpproj, gcpzone),
+		Uploader:     gcp.NewCertificateUpload(computesvc, gcpproj),
 		StateStorage: store,
 	})
 
@@ -86,12 +87,23 @@ func TestAuthorizeGCP(t *testing.T) {
 		}
 	}
 
-	// With us so far? now fire the request, and let the authorization happen
-	if !assert.NoError(t, aa.AuthorizeForDomain(domain), "authorize should succeed") {
+	if cert, err := store.LoadCert(domain); err != nil || time.Now().After(cert.NotAfter) {
+		var authz acmeagent.Authorization
+		if err := store.LoadAuthorization(domain, &authz); err != nil || authz.IsExpired() {
+			// No authorization, or is expired. Fire the authorization process
+			if !assert.NoError(t, aa.AuthorizeForDomain(domain), "authorize should succeed") {
+				return
+			}
+		}
+
+		// We know we have authorizaiton, so issue the certificates
+		if !assert.NoError(t, aa.IssueCertificate(domain, nil, false), "IssueCertificate should succeed") {
+			return
+		}
+	}
+
+	if !assert.NoError(t, aa.UploadCertificate(domain), "UploadCertificate should succeed") {
 		return
 	}
 
-	if !assert.NoError(t, aa.IssueCertificate(domain, nil, false), "IssueCertificate should succeed") {
-		return
-	}
 }

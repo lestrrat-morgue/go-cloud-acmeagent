@@ -25,6 +25,10 @@ type ChallengeCompleter interface {
 	Cleanup(domain, token string) error
 }
 
+type CertificateUploader interface {
+	Upload(name string, cert *x509.Certificate) error
+}
+
 type AgentOptions struct {
 	// DirectoryURL is the location from where to fetch the
 	// various endpoints. If not specified, DefaultDirectoryURL will
@@ -42,8 +46,12 @@ type AgentOptions struct {
 	// XXX No TLSSNI Completer currently available
 	TLSSNICompleter ChallengeCompleter
 
+	// Uploader is responsible for uploading the certificates.
+	Uploader CertificateUploader
+
 	StateStorage StateStorage
 }
+
 type Challenge struct {
 	URI              string     `json:"uri,omitempty"`
 	Type             string     `json:"type"`
@@ -131,13 +139,18 @@ type StateStorage interface {
 
 	SaveCert(string, *x509.Certificate, *x509.Certificate) error
 
+	// LoadCert loads the stored certificate
 	LoadCert(string) (*x509.Certificate, error)
+
+	// LoadCertFullchain loads the full chain certificate
+	LoadCertFullChain(string) (*x509.Certificate, error)
 }
 
 type AcmeAgent struct {
 	dnscc        ChallengeCompleter
 	httpcc       ChallengeCompleter
 	tlssnicc     ChallengeCompleter
+	uploader     CertificateUploader
 	store        StateStorage
 	signer       *jws.MultiSign
 	privjwk      *jwk.RsaPrivateKey
