@@ -14,6 +14,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
+	"google.golang.org/api/storage/v1"
 )
 
 func TestAuthorizeGCP(t *testing.T) {
@@ -43,14 +44,6 @@ func TestAuthorizeGCP(t *testing.T) {
 		return
 	}
 
-	store, err := localfs.New(localfs.StorageOptions{
-		Root: filepath.Join(wd, "acme"),
-		ID:   email,
-	})
-	if !assert.NoError(t, err, "Creating localfs state storage should succeed") {
-		return
-	}
-
 	// getting an object that can create appropriate DNS entries
 	// using Google CloudDNS to respond to dns-01 challenge
 	ctx := context.Background()
@@ -60,6 +53,24 @@ func TestAuthorizeGCP(t *testing.T) {
 	)
 	if !assert.NoError(t, err, "creating new Google oauth'ed client should succeed") {
 		panic(err)
+	}
+
+	var store acmeagent.StateStorage
+	switch storetyp := os.Getenv("ACME_AGENT_TEST_STORE_TYPE"); storetyp {
+	case "gcp":
+		storagesvc, err := storage.New(httpcl)
+		if !assert.NoError(t, err, "creating new Storage service should succeed") {
+			return
+		}
+		store = gcp.NewStorage(storagesvc, gcpproj, email, "acme")
+	default:
+		store, err = localfs.New(localfs.StorageOptions{
+			Root: filepath.Join(wd, "acme"),
+			ID:   email,
+		})
+		if !assert.NoError(t, err, "creating localfs state storage should succeed") {
+			return
+		}
 	}
 
 	dnssvc, err := dns.New(httpcl)
