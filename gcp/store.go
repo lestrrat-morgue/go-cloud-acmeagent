@@ -91,7 +91,7 @@ func (s Storage) LoadAccount(acct interface{}) (err error) {
 func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "authz.json")
 	if pdebug.Enabled {
-		g := pdebug.Marker("localfs.Storage.SaveAuthorization (%s)", path).BindError(&err)
+		g := pdebug.Marker("gcp.Storage.SaveAuthorization (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
@@ -118,7 +118,7 @@ func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error)
 func (s Storage) LoadAuthorization(domain string, authz interface{}) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "authz.json")
 	if pdebug.Enabled {
-		g := pdebug.Marker("localfs.Storage.LoadAuthorization (%s)", path).BindError(&err)
+		g := pdebug.Marker("gcp.Storage.LoadAuthorization (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
