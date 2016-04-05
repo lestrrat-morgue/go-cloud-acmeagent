@@ -822,5 +822,14 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 	if err != nil {
 		return err
 	}
-	return aa.uploader.Upload(domain, cert)
+
+	// domain names contain periods and such, so replace those with a dash
+	buf := bytes.Buffer{}
+	for _, r := range domain {
+		if r == '.' {
+			r = '-'
+		}
+		buf.WriteRune(r)
+	}
+	return aa.uploader.Upload(buf.String(), cert)
 }
