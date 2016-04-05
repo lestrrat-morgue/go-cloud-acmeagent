@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/lestrrat/go-pdebug"
+
 	"google.golang.org/api/compute/v1"
 )
 
@@ -20,7 +22,12 @@ func NewCertificateUpload(s *compute.Service, projectID string) *CertificateUplo
 	}
 }
 
-func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey *rsa.PrivateKey) error {
+func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey *rsa.PrivateKey) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("CertificateUpload.Upload (%s)", name).BindError(&err)
+		defer g.End()
+	}
+
 	// First, save to a local file
 	dst, err := ioutil.TempFile("", "gcp-cert-upload-")
 	if err != nil {
@@ -79,6 +86,9 @@ func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey
 				}
 				return nil
 			default:
+				if pdebug.Enabled {
+					pdebug.Printf("Certificates are not ready. waiting...")
+				}
 				continue
 			}
 		}
