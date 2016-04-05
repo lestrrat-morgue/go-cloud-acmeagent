@@ -113,7 +113,8 @@ func TestAuthorizeGCP(t *testing.T) {
 		}
 	}
 
-	if !assert.NoError(t, aa.UploadCertificate(domain), "UploadCertificate should succeed") {
+	_, err = aa.UploadCertificate(domain)
+	if !assert.NoError(t, err, "UploadCertificate should succeed") {
 		return
 	}
 

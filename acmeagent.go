@@ -821,37 +821,37 @@ GetCert:
 	return issuerCert, myCert, nil
 }
 
-func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
+func (aa *AcmeAgent) UploadCertificate(domain string) (certID string, err error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("AcmeAgent.UploadCertificate (%s)", domain).BindError(&err)
 		defer g.End()
 	}
 
 	if aa.uploader == nil {
-		return errors.New("uploader not configured")
+		return "", errors.New("uploader not configured")
 	}
 
 	certs := make([]*x509.Certificate, 2)
 
 	cert, err := aa.store.LoadCert(domain)
 	if err != nil {
-		return err
+		return "", err
 	}
 	certs[0] = cert
 
 	cert, err = aa.store.LoadCertIssuer(domain)
 	if err != nil {
-		return err
+		return "", err
 	}
 	certs[1] = cert
 
 	certjwk, err := aa.store.LoadCertKey(domain)
 	if err != nil {
-		return err
+		return "", err
 	}
 	certkey, err := certjwk.PrivateKey()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// domain names contain periods and such, so replace those with a dash
@@ -864,5 +864,7 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 	}
 	buf.WriteByte('-')
 	buf.WriteString(time.Now().Format("20060102-150405"))
-	return aa.uploader.Upload(buf.String(), certs, certkey)
+	name := buf.String()
+
+	return name, aa.uploader.Upload(name, certs, certkey)
 }
