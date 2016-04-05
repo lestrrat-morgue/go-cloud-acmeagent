@@ -26,7 +26,7 @@ type ChallengeCompleter interface {
 }
 
 type CertificateUploader interface {
-	Upload(name string, cert *x509.Certificate) error
+	Upload(name string, cert *x509.Certificate, certkey *rsa.PrivateKey) error
 }
 
 type AgentOptions struct {

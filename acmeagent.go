@@ -823,6 +823,15 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 		return err
 	}
 
+	certjwk, err := aa.store.LoadCertKey(domain)
+	if err != nil {
+		return err
+	}
+	certkey, err := certjwk.PrivateKey()
+	if err != nil {
+		return err
+	}
+
 	// domain names contain periods and such, so replace those with a dash
 	buf := bytes.Buffer{}
 	for _, r := range domain {
@@ -831,5 +840,5 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 		}
 		buf.WriteRune(r)
 	}
-	return aa.uploader.Upload(buf.String(), cert)
+	return aa.uploader.Upload(buf.String(), cert, certkey)
 }
