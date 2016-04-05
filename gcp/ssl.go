@@ -5,8 +5,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -46,8 +48,41 @@ func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey
 		Name:        name,
 		PrivateKey:  buf.String(),
 	}
-	if _, err := cu.Service.SslCertificates.Insert(cu.Project, &sslcert).Do(); err != nil {
+	oper, err := cu.Service.SslCertificates.Insert(cu.Project, &sslcert).Do()
+	if err != nil {
 		return err
 	}
-	return nil
+
+	// Poll until the operation is done
+	timeout := time.After(5 * time.Minute)
+	ticker := time.Tick(5 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			return errors.New("timed out waiting for certificate upload")
+		case <-ticker:
+			oper, err = cu.Service.GlobalOperations.Get(cu.Project, oper.Name).Do()
+			if err != nil {
+				return err
+			}
+			switch oper.Status {
+			case "DONE":
+				if oper.Error != nil {
+					buf := bytes.Buffer{}
+					for i, e := range oper.Error.Errors {
+						if i != 0 {
+							buf.WriteByte('\n')
+						}
+						buf.WriteString(e.Message)
+					}
+					return errors.New(buf.String())
+				}
+				return nil
+			default:
+				continue
+			}
+		}
+	}
+
+	return errors.New("failed to poll for operation status")
 }
