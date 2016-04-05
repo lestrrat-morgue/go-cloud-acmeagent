@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"time"
 
 	"github.com/lestrrat/go-pdebug"
 	"google.golang.org/api/compute/v1"
-  k8sapi "k8s.io/kubernetes/pkg/api"
-  k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
+	k8sapi "k8s.io/kubernetes/pkg/api"
+	k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
 )
 
 func NewSecretUpload(c *k8sclient.Client, namespace string) *SecretUpload {
 	return &SecretUpload{
-		Client: c,
+		Client:    c,
 		Namespace: namespace,
 	}
 }
@@ -27,11 +28,29 @@ func (su *SecretUpload) Upload(name string, certs []*x509.Certificate, certkey *
 		defer g.End()
 	}
 
+	certbuf := bytes.Buffer{}
+	for _, cert := range certs {
+		if err := pem.Encode(&certbuf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
+			return err
+		}
+	}
+
+	keybuf := bytes.Buffer{}
+	if err := pem.Encode(&keybuf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(certkey)}); err != nil {
+		return err
+	}
+
+	tlscert := make([]byte, base64.StdEncoding.EncodedLen(certbuf.Len()))
+	base64.StdEncoding.Encode(tlscert, certbuf.Bytes())
+
+	tlskey := make([]byte, base64.StdEncoding.EncodedLen(keybuf.Len()))
+	base64.StdEncoding.Encode(tlskey, keybuf.Bytes())
+
 	secret := k8sapi.Secret{
 		Type: "Opaque",
 		Data: map[string][]byte{
-			"tls.crt": []byte{}, // FIXME
-			"tls.key": []byte{}, // FIXME
+			"tls.crt": tlscert,
+			"tls.key": tlskey,
 		},
 		ObjectMeta: k8sapi.ObjectMeta{
 			Name: name,
