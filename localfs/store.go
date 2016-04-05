@@ -252,10 +252,25 @@ func (s Storage) LoadCert(domain string) (cert *x509.Certificate, err error) {
 	return store.LoadCert(src)
 }
 
+func (s Storage) LoadCertIssuer(domain string) (cert *x509.Certificate, err error) {
+	path := s.pathTo(s.ID, "domains", domain, "chain.pem")
+	if pdebug.Enabled {
+		g := pdebug.Marker("localfs.Storage.LoadCertIssuer (%s)", path).BindError(&err)
+		defer g.End()
+	}
+	src, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer src.Close()
+
+	return store.LoadCert(src)
+}
+
 func (s Storage) LoadCertFullChain(domain string) (cert *x509.Certificate, err error) {
 	path := s.pathTo(s.ID, "domains", domain, "fullchain.pem")
 	if pdebug.Enabled {
-		g := pdebug.Marker("localfs.Storage.LoadCert (%s)", path).BindError(&err)
+		g := pdebug.Marker("localfs.Storage.LoadCertFullChain (%s)", path).BindError(&err)
 		defer g.End()
 	}
 	src, err := os.Open(path)

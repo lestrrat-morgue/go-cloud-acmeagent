@@ -818,10 +818,19 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 		return errors.New("uploader not configured")
 	}
 
-	cert, err := aa.store.LoadCertFullChain(domain)
+	certs := make([]*x509.Certificate, 2)
+
+	cert, err := aa.store.LoadCert(domain)
 	if err != nil {
 		return err
 	}
+	certs[0] = cert
+
+	cert, err = aa.store.LoadCertIssuer(domain)
+	if err != nil {
+		return err
+	}
+	certs[1] = cert
 
 	certjwk, err := aa.store.LoadCertKey(domain)
 	if err != nil {
@@ -840,5 +849,5 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 		}
 		buf.WriteRune(r)
 	}
-	return aa.uploader.Upload(buf.String(), cert, certkey)
+	return aa.uploader.Upload(buf.String(), certs, certkey)
 }

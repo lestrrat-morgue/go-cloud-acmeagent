@@ -22,7 +22,7 @@ func NewCertificateUpload(s *compute.Service, projectID string) *CertificateUplo
 	}
 }
 
-func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey *rsa.PrivateKey) (err error) {
+func (cu *CertificateUpload) Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) (err error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("CertificateUpload.Upload (%s)", name).BindError(&err)
 		defer g.End()
@@ -36,8 +36,10 @@ func (cu *CertificateUpload) Upload(name string, cert *x509.Certificate, certkey
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err := pem.Encode(dst, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
-		return err
+	for _, cert := range certs {
+		if err := pem.Encode(dst, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
+			return err
+		}
 	}
 
 	if err := dst.Sync(); err != nil {

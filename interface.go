@@ -26,7 +26,7 @@ type ChallengeCompleter interface {
 }
 
 type CertificateUploader interface {
-	Upload(name string, cert *x509.Certificate, certkey *rsa.PrivateKey) error
+	Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) error
 }
 
 type AgentOptions struct {
@@ -141,6 +141,9 @@ type StateStorage interface {
 
 	// LoadCert loads the stored certificate
 	LoadCert(string) (*x509.Certificate, error)
+
+	// LoadCertIssuer loads the issuer certificate
+	LoadCertIssuer(string) (*x509.Certificate, error)
 
 	// LoadCertFullchain loads the full chain certificate
 	LoadCertFullChain(string) (*x509.Certificate, error)
