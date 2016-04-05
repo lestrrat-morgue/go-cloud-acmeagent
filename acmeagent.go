@@ -862,7 +862,7 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (err error) {
 		}
 		buf.WriteRune(r)
 	}
-	buf.WriteByte('_')
+	buf.WriteByte('-')
 	buf.WriteString(time.Now().Format("20060102-150405"))
 	return aa.uploader.Upload(buf.String(), certs, certkey)
 }
