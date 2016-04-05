@@ -9,20 +9,51 @@ import (
 	"time"
 
 	"github.com/lestrrat/go-pdebug"
-
 	"google.golang.org/api/compute/v1"
+  k8sapi "k8s.io/kubernetes/pkg/api"
+  k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
 )
 
-func NewCertificateUpload(s *compute.Service, projectID string) *CertificateUpload {
-	return &CertificateUpload{
+func NewSecretUpload(c *k8sclient.Client, namespace string) *SecretUpload {
+	return &SecretUpload{
+		Client: c,
+		Namespace: namespace,
+	}
+}
+
+func (su *SecretUpload) Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("SecretUpload.Upload (%s)", name).BindError(&err)
+		defer g.End()
+	}
+
+	secret := k8sapi.Secret{
+		Type: "Opaque",
+		Data: map[string][]byte{
+			"tls.crt": []byte{}, // FIXME
+			"tls.key": []byte{}, // FIXME
+		},
+		ObjectMeta: k8sapi.ObjectMeta{
+			Name: name,
+		},
+	}
+	secretsvc := su.Client.Secrets("default")
+	if _, err = secretsvc.Create(&secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewLBUpload(s *compute.Service, projectID string) *LBUpload {
+	return &LBUpload{
 		Project: projectID,
 		Service: s,
 	}
 }
 
-func (cu *CertificateUpload) Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) (err error) {
+func (cu *LBUpload) Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) (err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("CertificateUpload.Upload (%s)", name).BindError(&err)
+		g := pdebug.Marker("LBUpload.Upload (%s)", name).BindError(&err)
 		defer g.End()
 	}
 

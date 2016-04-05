@@ -4,6 +4,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
 	"google.golang.org/api/storage/v1"
+	k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
 )
 
 type CloudDNSComplete struct {
@@ -12,9 +13,14 @@ type CloudDNSComplete struct {
 	Zone    string       // GCP CloudDNS zone name
 }
 
-type CertificateUpload struct {
+type LBUpload struct {
 	Project string           // GCP project name, like "foobar-123"
 	Service *compute.Service // Google API for Compute Engine. Must be properly OAuth'ed
+}
+
+type SecretUpload struct {
+	Client    *k8sclient.Client
+	Namespace string
 }
 
 type Storage struct {

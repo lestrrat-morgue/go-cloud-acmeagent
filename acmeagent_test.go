@@ -86,7 +86,7 @@ func TestAuthorizeGCP(t *testing.T) {
 	// Tell the agent which challenges we can accept
 	aa, err := acmeagent.New(acmeagent.AgentOptions{
 		DNSCompleter: gcp.NewDNS(dnssvc, gcpproj, gcpzone),
-		Uploader:     gcp.NewCertificateUpload(computesvc, gcpproj),
+		Uploader:     gcp.NewLBUpload(computesvc, gcpproj),
 		StateStorage: store,
 	})
 
