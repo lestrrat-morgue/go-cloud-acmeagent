@@ -62,7 +62,7 @@ func TestAuthorizeGCP(t *testing.T) {
 		if !assert.NoError(t, err, "creating new Storage service should succeed") {
 			return
 		}
-		store = gcp.NewStorage(storagesvc, gcpproj, email, "acme")
+		store = gcp.NewStorage(storagesvc, gcpproj, email, "acme-" + gcpproj)
 	default:
 		store, err = localfs.New(localfs.StorageOptions{
 			Root: filepath.Join(wd, "acme"),
