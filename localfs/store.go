@@ -281,4 +281,3 @@ func (s Storage) LoadCertFullChain(domain string) (cert *x509.Certificate, err e
 
 	return store.LoadCert(src)
 }
-
