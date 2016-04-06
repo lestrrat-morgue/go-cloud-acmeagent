@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"time"
@@ -40,23 +39,20 @@ func (su *SecretUpload) Upload(name string, certs []*x509.Certificate, certkey *
 		return err
 	}
 
-	tlscert := make([]byte, base64.StdEncoding.EncodedLen(certbuf.Len()))
-	base64.StdEncoding.Encode(tlscert, certbuf.Bytes())
-
-	tlskey := make([]byte, base64.StdEncoding.EncodedLen(keybuf.Len()))
-	base64.StdEncoding.Encode(tlskey, keybuf.Bytes())
-
 	secret := k8sapi.Secret{
 		Type: "Opaque",
 		Data: map[string][]byte{
-			"tls.crt": tlscert,
-			"tls.key": tlskey,
+			"tls.crt": certbuf.Bytes(),
+			"tls.key": keybuf.Bytes(),
 		},
 		ObjectMeta: k8sapi.ObjectMeta{
 			Name: name,
+			Labels: map[string]string{
+				"group": "ssl-cert",
+			},
 		},
 	}
-	secretsvc := su.Client.Secrets("default")
+	secretsvc := su.Client.Secrets(su.Namespace)
 	if _, err = secretsvc.Create(&secret); err != nil {
 		return err
 	}
