@@ -1,5 +1,5 @@
-hash: 9cb026408fb1f1bbb336d91c5e1bca4a710db0a8bb80884ae8c108b376fb5b51
-updated: 2016-04-07T10:11:37.714231528+09:00
+hash: 54a185d2d1ee472c1217a180055bd50874b0de6073229c32f90205762d42945e
+updated: 2016-04-07T10:27:56.211259549+09:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -188,6 +188,10 @@ imports:
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
+- name: google.golang.org/cloud
+  version: 79ffda073da804f325135da5ff645a630a4d7625
+  subpackages:
+  - compute/metadata
 - name: gopkg.in/yaml.v2
   version: d466437aa4adc35830964cffc5b5f262c63ddcb4
 - name: k8s.io/kubernetes

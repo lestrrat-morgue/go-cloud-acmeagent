@@ -30,3 +30,6 @@ import:
 - package: golang.org/x/oauth2
   subpackages:
   - google
+- package: google.golang.org/cloud
+  subpackages:
+  - compute/metadata
