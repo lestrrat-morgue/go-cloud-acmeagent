@@ -1,5 +1,5 @@
-hash: ed06a8f19d72013a74823a1fd7cc1681771bc64c86624a1187d7fdfb089b317b
-updated: 2016-04-07T08:59:46.388385655+09:00
+hash: d714b9b771d12a005125eefbd05080ce6d9b36a58a2e01844e8ab8b8c1a96323
+updated: 2016-04-07T09:58:31.945192133+09:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -185,8 +185,8 @@ imports:
 - name: k8s.io/kubernetes
   version: b8d000853edbfe3d0d9bcd85e8e511a98b6ac6af
   subpackages:
-  - pkg/client/unversioned
   - pkg/api
+  - pkg/client/unversioned
   - pkg/api/meta
   - pkg/api/resource
   - pkg/api/unversioned

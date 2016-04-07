@@ -22,4 +22,5 @@ import:
   - storage/v1
 - package: k8s.io/kubernetes
   subpackages:
+  - pkg/api
   - pkg/client/unversioned
