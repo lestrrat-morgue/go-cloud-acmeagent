@@ -1,5 +1,5 @@
-hash: d714b9b771d12a005125eefbd05080ce6d9b36a58a2e01844e8ab8b8c1a96323
-updated: 2016-04-07T09:58:31.945192133+09:00
+hash: a3a94a74b1512f4f55e4a172e6bee787d18b2565e90ab63bddeb0cd4eee40ed0
+updated: 2016-04-07T10:07:42.663866839+09:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -160,6 +160,10 @@ imports:
   version: 490cc6eb5fa45bf8a8b7b73c8bc82a8160e8531d
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
+- name: github.com/stretchr/testify
+  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
+  subpackages:
+  - assert
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: github.com/ugorji/go
