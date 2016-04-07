@@ -17,8 +17,9 @@ const (
 )
 const joseContentType = "application/jose+json"
 const LetsEncryptStagingURL = "https://acme-staging.api.letsencrypt.org/directory"
+const LetsEncryptURL = "https://acme-v01.api.letsencrypt.org/directory"
 
-var DefaultDirectoryURL = LetsEncryptStagingURL
+var DefaultDirectoryURL = LetsEncryptURL
 
 type ChallengeCompleter interface {
 	Complete(domain, token string) error
