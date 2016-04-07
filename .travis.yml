@@ -1,9 +1,10 @@
 language: go
+sudo: false
 go:
   - 1.6
   - tip
 before_install:
-  - curl -L https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.tar.gz
+  - curl -LO https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.tar.gz
   - tar -xzf glide-0.10.2-linux-amd64.tar.gz
   - mv glide-0.10.2/glide $GOPATH/bin
   - rm -rf glide-0.10.2*
