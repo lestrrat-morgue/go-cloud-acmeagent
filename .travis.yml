@@ -7,8 +7,8 @@ before_install:
   - curl -LO https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.tar.gz
   - tar -xzf glide-0.10.2-linux-amd64.tar.gz
   - ls -l linux-amd64
-  - mv linux-amd64/glide $GOPATH/bin
+  - mv linux-amd64/glide $GOPATH/bin/
   - rm -rf glide-0.10.2* linux-amd64/
-  - ls -l $GOPATH/bin
+  - ls -l $GOPATH/bin/
 install:
   - glide install
