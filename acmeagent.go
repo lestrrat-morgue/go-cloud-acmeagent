@@ -330,6 +330,10 @@ func (aa *AcmeAgent) AuthorizeForDomain(domain string) error {
 		return err
 	}
 
+	if err := aa.store.SaveAuthorization(domain, &authz); err != nil {
+		return err
+	}
+
 	return nil
 }
 
