@@ -1,5 +1,5 @@
-hash: a3a94a74b1512f4f55e4a172e6bee787d18b2565e90ab63bddeb0cd4eee40ed0
-updated: 2016-04-07T10:07:42.663866839+09:00
+hash: 9cb026408fb1f1bbb336d91c5e1bca4a710db0a8bb80884ae8c108b376fb5b51
+updated: 2016-04-07T10:11:37.714231528+09:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -175,6 +175,10 @@ imports:
   subpackages:
   - context
   - context/ctxhttp
+- name: golang.org/x/oauth2
+  version: 33fa30fe45020622640e947917fd1fc4c81e3dce
+  subpackages:
+  - google
 - name: google.golang.org/api
   version: 77e7d383beb96054547729f49c372b3d01e196ff
   subpackages:
