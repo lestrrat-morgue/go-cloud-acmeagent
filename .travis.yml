@@ -8,5 +8,6 @@ before_install:
   - tar -xzf glide-0.10.2-linux-amd64.tar.gz
   - mv linux-amd64/glide $GOPATH/bin
   - rm -rf glide-0.10.2* linux-amd64/
+  - ls $GOPATH/bin
 install:
   - glide install
