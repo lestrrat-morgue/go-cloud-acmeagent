@@ -11,3 +11,5 @@ before_install:
   - rm -rf glide-0.10.2* linux-amd64/
 install:
   - glide install
+script:
+  - go test -tags debug0 -v $(glide nv)
