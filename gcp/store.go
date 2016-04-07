@@ -112,6 +112,15 @@ func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error)
 	return nil
 }
 
+func (s Storage) DeleteAuthorization(domain string) (err error) {
+	path := s.pathTo(s.ID, "domains", domain, "authz.json")
+	if pdebug.Enabled {
+		g := pdebug.Marker("gcp.Storage.DeleteAuthorization (%s)", path).BindError(&err)
+		defer g.End()
+	}
+	return s.Service.Objects.Delete(s.BucketName, path).Do()
+}
+
 // Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a pointer to `acmeagent.Authorization`
 func (s Storage) LoadAuthorization(domain string, authz interface{}) (err error) {
@@ -240,6 +249,28 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (
 		}
 		if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func (s Storage) DeleteCert(domain string) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("gcp.Storage.DeleteCert (%s)", domain).BindError(&err)
+		defer g.End()
+	}
+
+	paths := []string{
+		s.pathTo(s.ID, "domains", domain, "cert.pem"),
+		s.pathTo(s.ID, "domains", domain, "chain.pem"),
+		s.pathTo(s.ID, "domains", domain, "fullchain.pem"),
+	}
+	for _, path := range paths {
+		if err := s.Service.Objects.Delete(s.BucketName, path).Do(); err != nil {
+			// report, but do not stop on error
+			if pdebug.Enabled {
+				pdebug.Printf("Error while deleting %s: %s", path, err)
+			}
 		}
 	}
 	return nil

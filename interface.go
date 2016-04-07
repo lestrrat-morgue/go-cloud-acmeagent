@@ -123,6 +123,8 @@ type StateStorage interface {
 
 	SaveAuthorization(string, interface{}) error
 	LoadAuthorization(string, interface{}) error
+	// DeleteCert deletes the stored authorization
+	DeleteAuthorization(string) error
 
 	// SaveKey saves the private key in JWK format.
 	// The key must be an RSA private key.
@@ -141,6 +143,9 @@ type StateStorage interface {
 
 	// LoadCert loads the stored certificate
 	LoadCert(string) (*x509.Certificate, error)
+
+	// DeleteCert deletes the stored certificate
+	DeleteCert(string) error
 
 	// LoadCertIssuer loads the issuer certificate
 	LoadCertIssuer(string) (*x509.Certificate, error)

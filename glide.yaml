@@ -1,0 +1,35 @@
+package: github.com/lestrrat/go-cloud-acmeagent
+import:
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
+  - aws/awserr
+- package: github.com/lestrrat/go-jwx
+  subpackages:
+  - jwa
+  - jwk
+  - jws
+- package: github.com/lestrrat/go-pdebug
+- package: github.com/nabeken/aws-go-s3
+  subpackages:
+  - bucket
+  - bucket/option
+- package: github.com/tent/http-link-go
+- package: google.golang.org/api
+  subpackages:
+  - compute/v1
+  - dns/v1
+  - storage/v1
+- package: k8s.io/kubernetes
+  subpackages:
+  - pkg/api
+  - pkg/client/unversioned
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+- package: golang.org/x/oauth2
+  subpackages:
+  - google
+- package: google.golang.org/cloud
+  subpackages:
+  - compute/metadata
