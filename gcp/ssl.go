@@ -1,3 +1,5 @@
+// +build !k8s
+
 package gcp
 
 import (
@@ -10,54 +12,7 @@ import (
 
 	"github.com/lestrrat/go-pdebug"
 	"google.golang.org/api/compute/v1"
-	k8sapi "k8s.io/kubernetes/pkg/api"
-	k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
 )
-
-func NewSecretUpload(c *k8sclient.Client, namespace string) *SecretUpload {
-	return &SecretUpload{
-		Client:    c,
-		Namespace: namespace,
-	}
-}
-
-func (su *SecretUpload) Upload(name string, certs []*x509.Certificate, certkey *rsa.PrivateKey) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("SecretUpload.Upload (%s)", name).BindError(&err)
-		defer g.End()
-	}
-
-	certbuf := bytes.Buffer{}
-	for _, cert := range certs {
-		if err := pem.Encode(&certbuf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
-			return err
-		}
-	}
-
-	keybuf := bytes.Buffer{}
-	if err := pem.Encode(&keybuf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(certkey)}); err != nil {
-		return err
-	}
-
-	secret := k8sapi.Secret{
-		Type: "Opaque",
-		Data: map[string][]byte{
-			"tls.crt": certbuf.Bytes(),
-			"tls.key": keybuf.Bytes(),
-		},
-		ObjectMeta: k8sapi.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"group": "ssl-cert",
-			},
-		},
-	}
-	secretsvc := su.Client.Secrets(su.Namespace)
-	if _, err = secretsvc.Create(&secret); err != nil {
-		return err
-	}
-	return nil
-}
 
 func NewLBUpload(s *compute.Service, projectID string) *LBUpload {
 	return &LBUpload{
