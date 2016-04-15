@@ -1,5 +1,5 @@
-hash: 54a185d2d1ee472c1217a180055bd50874b0de6073229c32f90205762d42945e
-updated: 2016-04-07T10:27:56.211259549+09:00
+hash: 31aa7f2e227a0620c7c66caf86ca55c08e95e4e6e7fa2ceeb313d3161557000a
+updated: 2016-04-15T10:55:07.556690449+09:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -160,10 +160,6 @@ imports:
   version: 490cc6eb5fa45bf8a8b7b73c8bc82a8160e8531d
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
-- name: github.com/stretchr/testify
-  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
-  subpackages:
-  - assert
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: github.com/ugorji/go
@@ -171,16 +167,23 @@ imports:
   subpackages:
   - codec
 - name: golang.org/x/net
-  version: 024ed629fd292398cfd43c9678a5bf004f7defdc
+  version: c2528b2dd8352441850638a8bb678c2ad056fd3e
   subpackages:
   - context
   - context/ctxhttp
+  - trace
+  - internal/timeseries
+  - http2
+  - http2/hpack
 - name: golang.org/x/oauth2
   version: 33fa30fe45020622640e947917fd1fc4c81e3dce
   subpackages:
   - google
+  - internal
+  - jwt
+  - jws
 - name: google.golang.org/api
-  version: 77e7d383beb96054547729f49c372b3d01e196ff
+  version: 9737cc9e103c00d06a8f3993361dec083df3d252
   subpackages:
   - compute/v1
   - dns/v1
@@ -188,14 +191,41 @@ imports:
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
-- name: google.golang.org/cloud
-  version: 79ffda073da804f325135da5ff645a630a4d7625
+- name: google.golang.org/appengine
+  version: b67c870a16a2d58b3afa024461dcc51805f52e9d
   subpackages:
+  - urlfetch
+  - internal
+  - internal/urlfetch
+  - internal/app_identity
+  - internal/modules
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/remote_api
+- name: google.golang.org/cloud
+  version: eb47ba841d53d93506cfbfbc03927daf9cc48f88
+  subpackages:
+  - storage
+  - internal/transport
+  - internal
+  - internal/opts
   - compute/metadata
+- name: google.golang.org/grpc
+  version: 933601d8cd6418a8a891bd9075a7161b0a67badb
+  subpackages:
+  - credentials
+  - credentials/oauth
+  - codes
+  - grpclog
+  - metadata
+  - naming
+  - transport
+  - peer
 - name: gopkg.in/yaml.v2
-  version: d466437aa4adc35830964cffc5b5f262c63ddcb4
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
 - name: k8s.io/kubernetes
-  version: b8d000853edbfe3d0d9bcd85e8e511a98b6ac6af
+  version: b02f1bf667e36cc306a354728ea1ed362c2e5f3b
   subpackages:
   - pkg/api
   - pkg/client/unversioned
@@ -235,12 +265,12 @@ imports:
   - third_party/forked/reflect
   - pkg/util/validation
   - pkg/conversion/queryparams
+  - pkg/util/json
   - pkg/runtime/serializer/json
   - pkg/runtime/serializer/protobuf
   - pkg/runtime/serializer/recognizer
   - pkg/runtime/serializer/streaming
   - pkg/runtime/serializer/versioning
-  - pkg/util/integer
   - pkg/util/validation/field
   - pkg/api/v1
   - pkg/apimachinery
@@ -260,8 +290,10 @@ imports:
   - pkg/util/flowcontrol
   - pkg/watch/json
   - pkg/util/runtime
+  - pkg/util/framer
   - pkg/util/yaml
   - pkg/util/parsers
+  - pkg/watch/versioned
   - pkg/kubelet/qos
   - pkg/master/ports
   - pkg/api/endpoints
@@ -269,6 +301,7 @@ imports:
   - pkg/api/service
   - pkg/api/util
   - pkg/capabilities
+  - pkg/util/integer
   - pkg/util/hash
   - pkg/util/net/sets
 - name: speter.net/go/exp/math/dec/inf

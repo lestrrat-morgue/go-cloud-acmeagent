@@ -1,19 +1,21 @@
 package gcp
 
 import (
-	"bytes"
 	"crypto/x509"
+	"io"
 	"path"
+
+	"golang.org/x/net/context"
 
 	"github.com/lestrrat/go-cloud-acmeagent/store"
 	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-pdebug"
-	"google.golang.org/api/storage/v1"
+	"google.golang.org/cloud/storage"
 )
 
-func NewStorage(s *storage.Service, projectID, email, bucketName string) *Storage {
+func NewStorage(cl *storage.Client, projectID, email, bucketName string) *Storage {
 	return &Storage{
-		Service:    s,
+		Client:     cl,
 		BucketName: bucketName,
 		ID:         email,
 		Project:    projectID,
@@ -24,20 +26,38 @@ func (s Storage) pathTo(args ...string) string {
 	return path.Join(args...)
 }
 
-func (s Storage) assertBucket() error {
-	b, err := s.Service.Buckets.Get(s.BucketName).Do()
-	if err == nil {
-		return nil
-	}
-
-	b = &storage.Bucket{
-		Name: s.BucketName,
-	}
-
-	if _, err := s.Service.Buckets.Insert(s.Project, b).Do(); err != nil {
+type readerFn func(io.Reader, interface{}) error
+func (s Storage) readObject(path string, obj interface{}, reader readerFn) error {
+	ctx := context.Background()
+	b := s.Client.Bucket(s.BucketName)
+	src, err := b.Object(path).NewReader(ctx)
+	if err != nil {
 		return err
 	}
+	if err := reader(src, obj); err != nil {
+		return err
+	}
+	defer src.Close()
 	return nil
+}
+
+type writerFn func(io.Writer, interface{}) error
+func (s Storage) writeObject(path string, obj interface{}, writer writerFn) error {
+	ctx := context.Background()
+	b := s.Client.Bucket(s.BucketName)
+	dst := b.Object(path).NewWriter(ctx)
+	if err := writer(dst, obj); err != nil {
+		return err
+	}
+	defer dst.Close()
+	return nil
+}
+
+func (s Storage) deleteObject(path string) error {
+	ctx := context.Background()
+	b := s.Client.Bucket(s.BucketName)
+	obj := b.Object(path)
+	return obj.Delete(ctx)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -49,22 +69,7 @@ func (s Storage) SaveAccount(acct interface{}) (err error) {
 		defer g.End()
 	}
 
-	if err := s.assertBucket(); err != nil {
-		return err
-	}
-
-	dst := bytes.Buffer{}
-	if err := store.SaveAccount(&dst, acct); err != nil {
-		return err
-	}
-
-	object := storage.Object{
-		Name: path,
-	}
-	if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
-		return err
-	}
-	return nil
+	return s.writeObject(path, acct, store.SaveAccount)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -76,13 +81,7 @@ func (s Storage) LoadAccount(acct interface{}) (err error) {
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	return store.LoadAccount(res.Body, acct)
+	return s.readObject(path, acct, store.LoadAccount)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -94,22 +93,7 @@ func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error)
 		defer g.End()
 	}
 
-	if err := s.assertBucket(); err != nil {
-		return err
-	}
-
-	dst := bytes.Buffer{}
-	if err := store.SaveAuthorization(&dst, authz); err != nil {
-		return err
-	}
-
-	object := storage.Object{
-		Name: path,
-	}
-	if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
-		return err
-	}
-	return nil
+	return s.writeObject(path, authz, store.SaveAuthorization)
 }
 
 func (s Storage) DeleteAuthorization(domain string) (err error) {
@@ -118,7 +102,7 @@ func (s Storage) DeleteAuthorization(domain string) (err error) {
 		g := pdebug.Marker("gcp.Storage.DeleteAuthorization (%s)", path).BindError(&err)
 		defer g.End()
 	}
-	return s.Service.Objects.Delete(s.BucketName, path).Do()
+	return s.deleteObject(path)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -130,54 +114,27 @@ func (s Storage) LoadAuthorization(domain string, authz interface{}) (err error)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	return store.LoadAuthorization(res.Body, authz)
+	return s.readObject(path, authz, store.LoadAuthorization)
 }
 
-func (s Storage) SaveKey(k *jwk.RsaPrivateKey) (err error) {
+func (s Storage) SaveKey(key *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "info", "privkey.jwk")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.SaveKey (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	if err := s.assertBucket(); err != nil {
-		return err
-	}
-
-	dst := bytes.Buffer{}
-	if err := store.SaveKey(&dst, k); err != nil {
-		return err
-	}
-
-	object := storage.Object{
-		Name: path,
-	}
-	if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
-		return err
-	}
-	return nil
+	return s.writeObject(path, key, store.SaveKey)
 }
 
-func (s Storage) LoadKey() (key *jwk.RsaPrivateKey, err error) {
+func (s Storage) LoadKey(key *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "info", "privkey.jwk")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.LoadKey (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return store.LoadKey(res.Body)
+	return s.readObject(path, key, store.LoadKey)
 }
 
 func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) (err error) {
@@ -187,38 +144,17 @@ func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) (err error) {
 		defer g.End()
 	}
 
-	if err := s.assertBucket(); err != nil {
-		return err
-	}
-
-	dst := bytes.Buffer{}
-	if err := store.SaveCertKey(&dst, k); err != nil {
-		return err
-	}
-
-	object := storage.Object{
-		Name: path,
-	}
-	if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
-		return err
-	}
-	return nil
+	return s.writeObject(path, k, store.SaveCertKey)
 }
 
-func (s Storage) LoadCertKey(domain string) (key *jwk.RsaPrivateKey, err error) {
+func (s Storage) LoadCertKey(domain string, key *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "privkey.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.LoadCertKey (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return store.LoadCertKey(res.Body)
+	return s.readObject(path, key, store.LoadCertKey)
 }
 
 func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (err error) {
@@ -234,20 +170,10 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (
 		[]*x509.Certificate{issuerCert},
 	}
 
-	if err := s.assertBucket(); err != nil {
-		return err
-	}
-
 	for i := 0; i < 3; i++ {
 		path := s.pathTo(s.ID, "domains", domain, names[i])
-		dst := bytes.Buffer{}
-		if err := store.SaveCert(&dst, certs[i]...); err != nil {
-			return err
-		}
-		object := storage.Object{
-			Name: path,
-		}
-		if _, err := s.Service.Objects.Insert(s.BucketName, &object).Media(&dst).Do(); err != nil {
+
+		if err := s.writeObject(path, certs[i], store.SaveCert); err != nil {
 			return err
 		}
 	}
@@ -266,7 +192,7 @@ func (s Storage) DeleteCert(domain string) (err error) {
 		s.pathTo(s.ID, "domains", domain, "fullchain.pem"),
 	}
 	for _, path := range paths {
-		if err := s.Service.Objects.Delete(s.BucketName, path).Do(); err != nil {
+		if err := s.deleteObject(path); err != nil {
 			// report, but do not stop on error
 			if pdebug.Enabled {
 				pdebug.Printf("Error while deleting %s: %s", path, err)
@@ -276,50 +202,32 @@ func (s Storage) DeleteCert(domain string) (err error) {
 	return nil
 }
 
-func (s Storage) LoadCert(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCert(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "cert.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.LoadCert (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return store.LoadCert(res.Body)
+	return s.readObject(path, cert, store.LoadCert)
 }
 
-func (s Storage) LoadCertIssuer(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCertIssuer(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "chain.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.LoadCertIssuer (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return store.LoadCert(res.Body)
+	return s.readObject(path, cert, store.LoadCert)
 }
 
-func (s Storage) LoadCertFullChain(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCertFullChain(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "fullchain.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("gcp.Storage.LoadCertFullChain (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	res, err := s.Service.Objects.Get(s.BucketName, path).Download()
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return store.LoadCert(res.Body)
+	return s.readObject(path, cert, store.LoadCert)
 }

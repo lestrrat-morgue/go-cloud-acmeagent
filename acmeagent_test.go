@@ -1,6 +1,7 @@
 package acmeagent_test
 
 import (
+	"crypto/x509"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +15,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
-	"google.golang.org/api/storage/v1"
+	"google.golang.org/cloud/storage"
 )
 
 func TestAuthorizeGCP(t *testing.T) {
@@ -58,11 +59,12 @@ func TestAuthorizeGCP(t *testing.T) {
 	var store acmeagent.StateStorage
 	switch storetyp := os.Getenv("ACME_AGENT_TEST_STORE_TYPE"); storetyp {
 	case "gcp":
-		storagesvc, err := storage.New(httpcl)
+		ctx := context.Background()
+		scl, err := storage.NewClient(ctx)
 		if !assert.NoError(t, err, "creating new Storage service should succeed") {
 			return
 		}
-		store = gcp.NewStorage(storagesvc, gcpproj, email, "acme-" + gcpproj)
+		store = gcp.NewStorage(scl, gcpproj, email, "acme-"+gcpproj)
 	default:
 		store, err = localfs.New(localfs.StorageOptions{
 			Root: filepath.Join(wd, "acme"),
@@ -98,7 +100,8 @@ func TestAuthorizeGCP(t *testing.T) {
 		}
 	}
 
-	if cert, err := store.LoadCert(domain); err != nil || time.Now().After(cert.NotAfter) {
+	var cert *x509.Certificate
+	if err := store.LoadCert(domain, cert); err != nil || time.Now().After(cert.NotAfter) {
 		var authz acmeagent.Authorization
 		if err := store.LoadAuthorization(domain, &authz); err != nil || authz.IsExpired() {
 			// No authorization, or is expired. Fire the authorization process

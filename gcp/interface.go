@@ -3,7 +3,7 @@ package gcp
 import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
-	"google.golang.org/api/storage/v1"
+	"google.golang.org/cloud/storage"
 	k8sclient "k8s.io/kubernetes/pkg/client/unversioned"
 )
 
@@ -25,7 +25,7 @@ type SecretUpload struct {
 
 type Storage struct {
 	BucketName string           // GCP bucket name, most likely "acme"
+	Client     *storage.Client
 	ID         string           // Email of the user
 	Project    string           // GCP project name, like "foobar-123"
-	Service    *storage.Service // Google API for Cloud Storage. Must be properly OAuth'ed
 }

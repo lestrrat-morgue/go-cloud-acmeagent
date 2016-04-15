@@ -70,8 +70,7 @@ func (aa *AcmeAgent) initialize() (err error) {
 		return nil
 	}
 
-	aa.privjwk, err = aa.store.LoadKey()
-	if err != nil {
+	if err = aa.store.LoadKey(aa.privjwk); err != nil {
 		return err
 	}
 	aa.privkey, err = aa.privjwk.PrivateKey()
@@ -275,8 +274,8 @@ func (aa *AcmeAgent) Register(email string) error {
 		return nil
 	}
 
-	privjwk, err := aa.store.LoadKey()
-	if err != nil {
+	var privjwk jwk.RsaPrivateKey
+	if err := aa.store.LoadKey(&privjwk); err != nil {
 		return err
 	}
 
@@ -617,7 +616,8 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 		Renew:      renew,
 	}
 
-	if cert, err := aa.store.LoadCert(ctx.CommonName); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
+	var cert *x509.Certificate
+	if err := aa.store.LoadCert(ctx.CommonName, cert); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
 		if pdebug.Enabled {
 			pdebug.Printf("Certificate is valid until %s, aborting", cert.NotAfter.Format(time.RFC3339))
 		}
@@ -628,7 +628,8 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 		pdebug.Printf("Issuing new certificiate")
 	}
 
-	privjwk, err := aa.store.LoadCertKey(ctx.CommonName)
+	var privjwk *jwk.RsaPrivateKey
+	err := aa.store.LoadCertKey(ctx.CommonName, privjwk)
 	if err != nil {
 		// No certificate key available, need to create a new one
 		certkey, err := rsa.GenerateKey(rand.Reader, sslCertKeySize)
@@ -837,20 +838,19 @@ func (aa *AcmeAgent) UploadCertificate(domain string) (certID string, err error)
 
 	certs := make([]*x509.Certificate, 2)
 
-	cert, err := aa.store.LoadCert(domain)
-	if err != nil {
+	var cert *x509.Certificate
+	if err = aa.store.LoadCert(domain, cert); err != nil {
 		return "", err
 	}
 	certs[0] = cert
 
-	cert, err = aa.store.LoadCertIssuer(domain)
-	if err != nil {
+	if err = aa.store.LoadCertIssuer(domain, cert); err != nil {
 		return "", err
 	}
 	certs[1] = cert
 
-	certjwk, err := aa.store.LoadCertKey(domain)
-	if err != nil {
+	var certjwk *jwk.RsaPrivateKey
+	if err := aa.store.LoadCertKey(domain, certjwk); err != nil {
 		return "", err
 	}
 	certkey, err := certjwk.PrivateKey()
