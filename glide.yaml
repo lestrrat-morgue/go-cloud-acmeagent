@@ -18,6 +18,7 @@ import:
 - package: golang.org/x/net
   subpackages:
   - context
+  - http2
 - package: google.golang.org/api
   subpackages:
   - compute/v1
@@ -30,3 +31,4 @@ import:
 - package: github.com/stretchr/testify
   subpackages:
   - assert
+- package: google.golang.org/grpc

@@ -1,5 +1,5 @@
-hash: 64989ad0c8108825a394073f006d3911ee427523b96be220ca3dfd51d54427fd
-updated: 2016-04-15T22:19:52.480492408+09:00
+hash: 6ceba48605701e6d6bb60b34c4b422063cc616a2eda02a0a2d9ee3b83135fcaf
+updated: 2016-04-16T16:23:28.737298304+09:00
 imports:
 - name: github.com/aws/aws-sdk-go
   version: bf2f8fe7f45e68017086d069498638893feddf64
@@ -10,6 +10,10 @@ imports:
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
+- name: github.com/golang/protobuf
+  version: f0a097ddac24fb00e07d2ac17f8671423f3ea47c
+  subpackages:
+  - proto
 - name: github.com/lestrrat/go-jwx
   version: 76ff5fd46c773bcf15f019da4b5247780efec796
   subpackages:
@@ -33,12 +37,21 @@ imports:
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: golang.org/x/net
-  version: c2528b2dd8352441850638a8bb678c2ad056fd3e
+  version: fb93926129b8ec0056f2f458b1f519654814edf0
   subpackages:
   - context
+  - http2
   - context/ctxhttp
+  - trace
+  - http2/hpack
+  - internal/timeseries
 - name: golang.org/x/oauth2
   version: b0e2337fe6ec0c637fa4f123268b972f334504eb
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
 - name: google.golang.org/api
   version: 9737cc9e103c00d06a8f3993361dec083df3d252
   subpackages:
@@ -48,9 +61,36 @@ imports:
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
+- name: google.golang.org/appengine
+  version: c8bc8a996f05c4c477475fc0ae5d6614136be4c0
+  subpackages:
+  - urlfetch
+  - internal
+  - internal/urlfetch
+  - internal/app_identity
+  - internal/modules
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/remote_api
 - name: google.golang.org/cloud
   version: 79ffda073da804f325135da5ff645a630a4d7625
   subpackages:
   - storage
+  - internal/transport
   - internal
+  - internal/opts
+  - compute/metadata
+- name: google.golang.org/grpc
+  version: 8eeecf2291de9d171d0b1392a27ff3975679f4f5
+  subpackages:
+  - credentials
+  - credentials/oauth
+  - codes
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - transport
+  - peer
 devImports: []
