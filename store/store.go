@@ -55,12 +55,14 @@ func SaveKey(dst io.Writer, k interface{}) error {
 	return json.NewEncoder(dst).Encode(privjwk)
 }
 
-func LoadKey(src io.Reader, key interface{}) error {
+func LoadKey(src io.Reader, keyif interface{}) error {
 	var v jwk.RsaPrivateKey
 	if err := json.NewDecoder(src).Decode(&v); err != nil {
 		return err
 	}
-	key = &v
+
+	key := keyif.(*jwk.RsaPrivateKey)
+	*key = v
 
 	return nil
 }
@@ -86,7 +88,7 @@ func SaveCertKey(dst io.Writer, key interface{}) error {
 	return nil
 }
 
-func LoadCertKey(src io.Reader, key interface{}) error {
+func LoadCertKey(src io.Reader, keyif interface{}) error {
 	buf, err := ioutil.ReadAll(src)
 	if err != nil {
 		return err
@@ -102,7 +104,9 @@ func LoadCertKey(src io.Reader, key interface{}) error {
 	if err != nil {
 		return err
 	}
-	key = privjwk
+
+	key := keyif.(*jwk.RsaPrivateKey)
+	*key = *privjwk
 	return nil
 }
 
@@ -130,16 +134,20 @@ func SaveCert(dst io.Writer, in interface{}) error {
 	return nil
 }
 
-func LoadCert(src io.Reader, cert interface{}) error {
+func LoadCert(src io.Reader, certif interface{}) error {
 	buf, err := ioutil.ReadAll(src)
 	if err != nil {
 		return err
 	}
 
 	block, _ := pem.Decode(buf)
-	cert, err = x509.ParseCertificate(block.Bytes)
+	parsed, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return err
 	}
+
+	cert := certif.(*x509.Certificate)
+	*cert = *parsed
+
 	return nil
 }
