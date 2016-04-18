@@ -156,11 +156,11 @@ type StateStorage interface {
 }
 
 type AcmeAgent struct {
+	Store        StateStorage
 	dnscc        ChallengeCompleter
 	httpcc       ChallengeCompleter
 	tlssnicc     ChallengeCompleter
 	uploader     CertificateUploader
-	store        StateStorage
 	signer       *jws.MultiSign
 	privjwk      *jwk.RsaPrivateKey
 	privkey      *rsa.PrivateKey
