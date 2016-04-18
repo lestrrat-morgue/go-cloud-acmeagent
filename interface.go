@@ -132,27 +132,27 @@ type StateStorage interface {
 	SaveKey(*jwk.RsaPrivateKey) error
 
 	// LoadKey loads the stored private key.
-	LoadKey() (*jwk.RsaPrivateKey, error)
+	LoadKey(*jwk.RsaPrivateKey) error
 
 	// SaveCertKey saves the certificate private key in PEM format.
 	// The key must be an RSA private key.
 	SaveCertKey(string, *jwk.RsaPrivateKey) error
 
-	LoadCertKey(string) (*jwk.RsaPrivateKey, error)
+	LoadCertKey(string, *jwk.RsaPrivateKey) error
 
 	SaveCert(string, *x509.Certificate, *x509.Certificate) error
 
 	// LoadCert loads the stored certificate
-	LoadCert(string) (*x509.Certificate, error)
+	LoadCert(string, *x509.Certificate) error
 
 	// DeleteCert deletes the stored certificate
 	DeleteCert(string) error
 
 	// LoadCertIssuer loads the issuer certificate
-	LoadCertIssuer(string) (*x509.Certificate, error)
+	LoadCertIssuer(string, *x509.Certificate) error
 
 	// LoadCertFullchain loads the full chain certificate
-	LoadCertFullChain(string) (*x509.Certificate, error)
+	LoadCertFullChain(string, *x509.Certificate) error
 }
 
 type AcmeAgent struct {

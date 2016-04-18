@@ -2,6 +2,7 @@ package localfs
 
 import (
 	"crypto/x509"
+	"io"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -57,6 +58,17 @@ func (s Storage) pathTo(args ...string) string {
 	return filepath.Join(l...)
 }
 
+type readerFn func(io.Reader, interface{}) error
+func (s Storage) readObject(path string, obj interface{}, reader readerFn) error {
+	dst, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	return reader(dst, obj)
+}
+
 // Parameter `authz` is an interface{} to avoid circular dependencies.
 // In reality this must be a pointer to `acmeagent.Account`
 func (s Storage) SaveAccount(acct interface{}) (err error) {
@@ -66,13 +78,23 @@ func (s Storage) SaveAccount(acct interface{}) (err error) {
 		defer g.End()
 	}
 
+	return s.writeObject(path, acct, store.SaveAccount)
+}
+
+type writerFn func(io.Writer, interface{}) error
+
+func (s Storage) writeObject(path string, obj interface{}, writer writerFn) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
 	dst, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer dst.Close()
 
-	return store.SaveAccount(dst, acct)
+	return writer(dst, obj)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -84,13 +106,7 @@ func (s Storage) LoadAccount(acct interface{}) (err error) {
 		defer g.End()
 	}
 
-	src, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	return store.LoadAccount(src, acct)
+	return s.readObject(path, acct, store.LoadAccount)
 }
 
 // Parameter `authz` is an interface{} to avoid circular dependencies.
@@ -102,17 +118,7 @@ func (s Storage) SaveAuthorization(domain string, authz interface{}) (err error)
 		defer g.End()
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-
-	dst, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	return store.SaveAuthorization(dst, authz)
+	return s.writeObject(path, authz, store.SaveAuthorization)
 }
 
 func (s Storage) DeleteAuthorization(domain string) (err error) {
@@ -134,13 +140,7 @@ func (s Storage) LoadAuthorization(domain string, authz interface{}) (err error)
 		defer g.End()
 	}
 
-	src, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	return store.LoadAuthorization(src, authz)
+	return s.readObject(path, authz, store.LoadAuthorization)
 }
 
 func (s Storage) SaveKey(k *jwk.RsaPrivateKey) (err error) {
@@ -150,33 +150,17 @@ func (s Storage) SaveKey(k *jwk.RsaPrivateKey) (err error) {
 		defer g.End()
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-
-	dst, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	return store.SaveKey(dst, k)
+	return s.writeObject(path, k, store.SaveKey)
 }
 
-func (s Storage) LoadKey() (key *jwk.RsaPrivateKey, err error) {
+func (s Storage) LoadKey(key *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "info", "privkey.jwk")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadKey (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	src, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer src.Close()
-
-	return store.LoadKey(src)
+	return s.readObject(path, key, store.LoadKey)
 }
 
 func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) (err error) {
@@ -199,20 +183,14 @@ func (s Storage) SaveCertKey(domain string, k *jwk.RsaPrivateKey) (err error) {
 	return store.SaveCertKey(dst, k)
 }
 
-func (s Storage) LoadCertKey(domain string) (key *jwk.RsaPrivateKey, err error) {
+func (s Storage) LoadCertKey(domain string, key *jwk.RsaPrivateKey) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "privkey.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadCertKey (%s)", path).BindError(&err)
 		defer g.End()
 	}
 
-	src, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer src.Close()
-
-	return store.LoadCertKey(src)
+	return s.readObject(path, key, store.LoadCertKey)
 }
 
 func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (err error) {
@@ -230,17 +208,7 @@ func (s Storage) SaveCert(domain string, issuerCert, myCert *x509.Certificate) (
 
 	for i := 0; i < 3; i++ {
 		path := s.pathTo(s.ID, "domains", domain, names[i])
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			return err
-		}
-
-		dst, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-
-		if err := store.SaveCert(dst, certs[i]...); err != nil {
+		if err := s.writeObject(path, certs[i], store.SaveCert); err != nil {
 			return err
 		}
 	}
@@ -270,47 +238,32 @@ func (s Storage) DeleteCert(domain string) (err error) {
 	return nil
 }
 
-func (s Storage) LoadCert(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCert(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "cert.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadCert (%s)", path).BindError(&err)
 		defer g.End()
 	}
-	src, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer src.Close()
 
-	return store.LoadCert(src)
+	return s.readObject(path, cert, store.LoadCert)
 }
 
-func (s Storage) LoadCertIssuer(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCertIssuer(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "chain.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadCertIssuer (%s)", path).BindError(&err)
 		defer g.End()
 	}
-	src, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer src.Close()
 
-	return store.LoadCert(src)
+	return s.readObject(path, cert, store.LoadCert)
 }
 
-func (s Storage) LoadCertFullChain(domain string) (cert *x509.Certificate, err error) {
+func (s Storage) LoadCertFullChain(domain string, cert *x509.Certificate) (err error) {
 	path := s.pathTo(s.ID, "domains", domain, "fullchain.pem")
 	if pdebug.Enabled {
 		g := pdebug.Marker("localfs.Storage.LoadCertFullChain (%s)", path).BindError(&err)
 		defer g.End()
 	}
-	src, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer src.Close()
 
-	return store.LoadCert(src)
+	return s.readObject(path, cert, store.LoadCert)
 }
