@@ -628,8 +628,8 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 		pdebug.Printf("Issuing new certificiate")
 	}
 
-	var privjwk *jwk.RsaPrivateKey
-	err := aa.Store.LoadCertKey(ctx.CommonName, privjwk)
+	var privjwk jwk.RsaPrivateKey
+	err := aa.Store.LoadCertKey(ctx.CommonName, &privjwk)
 	if err != nil {
 		// No certificate key available, need to create a new one
 		certkey, err := rsa.GenerateKey(rand.Reader, sslCertKeySize)
@@ -637,12 +637,13 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 			return err
 		}
 
-		privjwk, err = jwk.NewRsaPrivateKey(certkey)
+		k, err := jwk.NewRsaPrivateKey(certkey)
 		if err != nil {
 			return err
 		}
+		privjwk = *k
 
-		if err := aa.Store.SaveCertKey(ctx.CommonName, privjwk); err != nil {
+		if err := aa.Store.SaveCertKey(ctx.CommonName, &privjwk); err != nil {
 			return err
 		}
 	}
