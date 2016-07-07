@@ -162,7 +162,7 @@ type AcmeAgent struct {
 	tlssnicc     ChallengeCompleter
 	uploader     CertificateUploader
 	signer       *jws.MultiSign
-	privjwk      *jwk.RsaPrivateKey
+	privjwk      jwk.RsaPrivateKey
 	privkey      *rsa.PrivateKey
 	directoryURL string
 	directory    directory

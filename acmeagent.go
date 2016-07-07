@@ -70,7 +70,7 @@ func (aa *AcmeAgent) initialize() (err error) {
 		return nil
 	}
 
-	if err = aa.Store.LoadKey(aa.privjwk); err != nil {
+	if err = aa.Store.LoadKey(&aa.privjwk); err != nil {
 		return err
 	}
 	aa.privkey, err = aa.privjwk.PrivateKey()
