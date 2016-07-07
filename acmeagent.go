@@ -616,8 +616,8 @@ func (aa *AcmeAgent) IssueCertificate(cn string, domains []string, renew bool) e
 		Renew:      renew,
 	}
 
-	var cert *x509.Certificate
-	if err := aa.Store.LoadCert(ctx.CommonName, cert); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
+	var cert x509.Certificate
+	if err := aa.Store.LoadCert(ctx.CommonName, &cert); err == nil && time.Now().Before(cert.NotAfter.AddDate(0, -1, 0)) {
 		if pdebug.Enabled {
 			pdebug.Printf("Certificate is valid until %s, aborting", cert.NotAfter.Format(time.RFC3339))
 		}
