@@ -56,12 +56,19 @@ func SaveKey(dst io.Writer, k interface{}) error {
 }
 
 func LoadKey(src io.Reader, keyif interface{}) error {
+	var key *jwk.RsaPrivateKey
+	switch keyif.(type) {
+	case *jwk.RsaPrivateKey:
+		key = keyif.(*jwk.RsaPrivateKey)
+	default:
+		return errors.New("invalid key passed to store.LoadKey")
+	}
+
 	var v jwk.RsaPrivateKey
 	if err := json.NewDecoder(src).Decode(&v); err != nil {
 		return err
 	}
 
-	key := keyif.(*jwk.RsaPrivateKey)
 	*key = v
 
 	return nil
